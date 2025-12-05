@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歡迎</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #00B900 0%, #00C300 100%);
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 40px 20px;
+            max-width: 400px;
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 50%;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .logo svg { width: 50px; height: 50px; fill: #00B900; }
+        h1 { font-size: 24px; margin-bottom: 12px; }
+        p { font-size: 16px; opacity: 0.9; margin-bottom: 32px; line-height: 1.5; }
+        .btn {
+            background: white;
+            color: #00B900;
+            border: none;
+            padding: 16px 48px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+        .btn:hover { transform: scale(1.05); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        #loading { font-size: 18px; }
+        #content { display: none; }
+        .error { background: rgba(255,255,255,0.2); padding: 16px; border-radius: 8px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loading">載入中...</div>
+        <div id="content">
+            <div class="logo">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            </div>
+            <h1>David鐵板燒</h1>
+            <p>感謝您的興趣！<br>點擊下方按鈕與我們對話</p>
+            <button class="btn" id="openChatBtn">開始對話</button>
+        </div>
+        <div id="error" class="error" style="display:none;"></div>
+    </div>
+
+    <script>
+    // ====== 設定 ======
+    const CONFIG = {
+        LIFF_ID: '2008632026-9EqRbegz',
+        LINE_OA_ID: '@620fszph',  // 請確認你的 LINE OA Basic ID
+        N8N_WEBHOOK: 'https://tk2line.zeabur.app/webhook/liff-tracking'
+    };
+
+    // 取得 URL 參數
+    function getUrlParams() {
+        const params = new URLSearchParams(window.location.search);
+        return {
+            ttclid: params.get('ttclid') || '',
+            campaign: params.get('campaign') || '',
+            adgroup: params.get('adgroup') || '',
+            ad: params.get('ad') || ''
+        };
+    }
+
+    // 發送事件到 n8n
+    async function trackEvent(eventName, userId) {
+        const params = getUrlParams();
+        
+        try {
+            await fetch(CONFIG.N8N_WEBHOOK, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    event: eventName,
+                    userId: userId,
+                    ttclid: params.ttclid,
+                    campaign: params.campaign,
+                    adgroup: params.adgroup,
+                    ad: params.ad,
+                    timestamp: new Date().toISOString(),
+                    userAgent: navigator.userAgent,
+                    url: window.location.href
+                })
+            });
+            console.log(`[Track] ${eventName} sent`);
+        } catch (error) {
+            console.error(`[Track] ${eventName} failed:`, error);
+        }
+    }
+
+    // 開啟 LINE 對話
+    function openLineChat() {
+        const chatUrl = `https://line.me/R/oaMessage/${CONFIG.LINE_OA_ID}/`;
+        
+        if (liff.isInClient()) {
+            liff.openWindow({ url: chatUrl, external: false });
+        } else {
+            window.location.href = chatUrl;
+        }
+    }
+
+    // 顯示錯誤
+    function showError(message) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+        document.getElementById('error').textContent = message;
+    }
+
+    // 初始化
+    async function initApp() {
+        try {
+            await liff.init({ liffId: CONFIG.LIFF_ID });
+            console.log('[LIFF] Initialized');
+
+            // 檢查登入狀態
+            if (!liff.isLoggedIn()) {
+                console.log('[LIFF] Not logged in, redirecting...');
+                liff.login();
+                return;
+            }
+
+            // 取得用戶資料
+            const profile = await liff.getProfile();
+            console.log('[LIFF] User ID:', profile.userId);
+
+            // 追蹤 ViewContent 事件（Upper Funnel）
+            await trackEvent('ViewContent', profile.userId);
+
+            // 顯示內容
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+
+        } catch (error) {
+            console.error('[LIFF] Error:', error);
+            showError('載入失敗，請重試');
+        }
+    }
+
+    // 按鈕點擊事件
+    document.getElementById('openChatBtn').addEventListener('click', async function() {
+        this.disabled = true;
+        this.textContent = '跳轉中...';
+
+        try {
+            // 追蹤 ClickButton 事件（Middle Funnel）
+            const profile = await liff.getProfile();
+            await trackEvent('ClickButton', profile.userId);
+        } catch (e) {
+            console.error('[Track] ClickButton failed:', e);
+        }
+
+        // 延遲後開啟 LINE
+        setTimeout(openLineChat, 500);
+    });
+
+    // 啟動
+    initApp();
+    </script>
+</body>
+</html>
