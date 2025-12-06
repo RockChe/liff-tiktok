@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html>
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>David 鐵板燒</title>
+    <title>David鐵板燒</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         * {
@@ -127,270 +128,315 @@
         }
     </style>
 </head>
+
 <body>
-<div class="container">
-    <div id="loading">載入中...</div>
+    <div class="container">
+        <div id="loading">載入中...</div>
 
-    <div id="loginOptions">
-        <div class="logo">
-            <svg viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            </svg>
+        <div id="loginOptions">
+            <div class="logo">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                </svg>
+            </div>
+            <h1>David鐵板燒</h1>
+            <p>請選擇登入方式</p>
+            <button class="btn" id="openLineAppBtn">使用 LINE App 開啟</button>
+            <button class="btn btn-secondary" id="loginBtn">使用帳號密碼登入</button>
         </div>
-        <h1>David 鐵板燒</h1>
-        <p>請選擇登入方式</p>
-        <button class="btn" id="openLineAppBtn">使用 LINE App 開啟</button>
-        <button class="btn btn-secondary" id="loginBtn">使用帳號密碼登入</button>
-    </div>
 
-    <div id="content">
-        <div class="logo">
-            <svg viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            </svg>
+        <div id="content">
+            <div class="logo">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                </svg>
+            </div>
+            <h1>David鐵板燒</h1>
+            <p>感謝您的興趣！<br>點擊下方按鈕與我們對話</p>
+            <button class="btn" id="openChatBtn">開始對話</button>
         </div>
-        <h1>David 鐵板燒</h1>
-        <p>感謝您的興趣！點擊下方按鈕與我們對話</p>
-        <button class="btn" id="openChatBtn">開始對話</button>
+
+        <div id="error" class="error" style="display:none;"></div>
     </div>
+    <div id="debug" class="debug"></div>
 
-    <div id="error" class="error" style="display:none;"></div>
-</div>
-<div id="debug" class="debug"></div>
-
-<script>
-    const CONFIG = {
-        LIFF_ID: '2008632026-9EqRbegz',
-        LINE_OA_ID: '@662sordy',
-        N8N_WEBHOOK: 'https://tk2line.zeabur.app/webhook/liff-tracking',
-        CONTENT_ID: 'david_teppanyaki',
-        DEBUG: true
-    };
-
-    const SESSION_ID = Date.now().toString();
-
-    const elements = {
-        loading: document.getElementById('loading'),
-        loginOptions: document.getElementById('loginOptions'),
-        content: document.getElementById('content'),
-        error: document.getElementById('error'),
-        debug: document.getElementById('debug')
-    };
-
-    function log(message) {
-        console.log(message);
-        if (!CONFIG.DEBUG) return;
-        if (elements.debug) {
-            elements.debug.style.display = 'block';
-            elements.debug.innerHTML += `${message}<br>`;
-            elements.debug.scrollTop = elements.debug.scrollHeight;
-        }
-    }
-
-    function isInAppBrowser() {
-        const ua = navigator.userAgent || navigator.vendor || window.opera;
-        log(`[Check] UA: ${ua}`);
-
-        const patterns = [
-            'FBAN', 'FBAV', 'Instagram', 'Line/', 'Twitter', 'BytedanceWebview',
-            'musical_ly', 'TikTok', 'Snapchat', 'Pinterest', 'LinkedInApp',
-            'KAKAOTALK', 'WeChat', 'MicroMessenger'
-        ];
-
-        return patterns.some((p) => {
-            const match = ua.indexOf(p) > -1;
-            if (match) log(`[Browser] Detected In-App Browser: ${p}`);
-            return match;
-        });
-    }
-
-    function getUrlParams() {
-        const params = new URLSearchParams(window.location.search);
-        return {
-            ttclid: params.get('ttclid') || '',
-            campaign: params.get('campaign') || '',
-            adgroup: params.get('adgroup') || '',
-            ad: params.get('ad') || ''
-        };
-    }
-
-    function getLineAppUrl() {
-        const params = window.location.search;
-        return `https://liff.line.me/${CONFIG.LIFF_ID}${params}`;
-    }
-
-    async function trackEvent(eventName, userId = 'guest') {
-        const params = getUrlParams();
-        const payload = {
-            event: eventName,
-            userId,
-            ttclid: params.ttclid,
-            sessionId: SESSION_ID,
-            campaign: params.campaign,
-            adgroup: params.adgroup,
-            ad: params.ad,
-            contentId: CONFIG.CONTENT_ID,
-            contentType: 'product',
-            timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent,
-            url: window.location.href
+    <script>
+        // ====== 設定區 ======
+        const CONFIG = {
+            LIFF_ID: '2008632026-9EqRbegz',
+            LINE_OA_ID: '@662sordy',
+            N8N_WEBHOOK: 'https://tk2line.zeabur.app/webhook/liff-tracking',
+            CONTENT_ID: 'david_teppanyaki',
+            DEBUG: true // 開啟除錯模式
         };
 
-        log(`[Track] Sending ${eventName}`);
+        // 產生 Session ID
+        const SESSION_ID = Date.now().toString();
 
-        try {
-            const response = await fetch(CONFIG.N8N_WEBHOOK, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                log('[Track] Success');
-            } else {
-                log(`[Track] Failed: ${response.status}`);
+        // 除錯日誌
+        function log(message) {
+            console.log(message);
+            // 總是顯示 debug 視窗以便除錯
+            const debugEl = document.getElementById('debug');
+            if (debugEl) {
+                debugEl.style.display = 'block';
+                debugEl.innerHTML += message + '<br>';
+                debugEl.scrollTop = debugEl.scrollHeight;
             }
-        } catch (error) {
-            log(`[Track] Error: ${error.message}`);
         }
-    }
 
-    function openLineChat() {
-        const chatUrl = `https://line.me/R/oaMessage/${CONFIG.LINE_OA_ID}/`;
-        log(`[LINE] Opening: ${chatUrl}`);
+        // 偵測是否在 In-App Browser 中
+        function isInAppBrowser() {
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            log(`[Check] UA: ${ua}`);
 
-        if (typeof liff !== 'undefined' && liff.isInClient()) {
-            liff.openWindow({ url: chatUrl, external: false });
-        } else {
-            window.location.href = chatUrl;
-        }
-    }
+            // 偵測常見的 In-App Browser
+            const inAppPatterns = [
+                'FBAN', 'FBAV',           // Facebook
+                'Instagram',               // Instagram
+                'Line/',                   // LINE 內建瀏覽器（非 LIFF）
+                'Twitter',                 // Twitter/X
+                'BytedanceWebview',        // TikTok
+                'musical_ly',              // TikTok (舊版)
+                'TikTok',                  // TikTok
+                'Snapchat',                // Snapchat
+                'Pinterest',               // Pinterest
+                'LinkedInApp',             // LinkedIn
+                'KAKAOTALK',               // KakaoTalk
+                'WeChat', 'MicroMessenger' // WeChat
+            ];
 
-    async function copyToClipboard(text) {
-        log('[Copy] Trying clipboard');
-        try {
-            if (navigator.clipboard?.writeText) {
-                await navigator.clipboard.writeText(text);
-                return true;
+            for (const pattern of inAppPatterns) {
+                if (ua.indexOf(pattern) > -1) {
+                    log(`[Browser] Detected In-App Browser: ${pattern}`);
+                    return true;
+                }
             }
-            throw new Error('Clipboard API not available');
-        } catch (err) {
-            log(`[Copy] Clipboard API failed: ${err.message}, trying fallback`);
+            return false;
+        }
+
+        // 取得 URL 參數
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                ttclid: params.get('ttclid') || '',
+                campaign: params.get('campaign') || '',
+                adgroup: params.get('adgroup') || '',
+                ad: params.get('ad') || ''
+            };
+        }
+
+        // 取得 LINE App URL (使用 HTTPS 格式)
+        function getLineAppUrl() {
+            const params = window.location.search;
+            return `https://liff.line.me/${CONFIG.LIFF_ID}${params}`;
+        }
+
+        // 發送事件到 n8n
+        async function trackEvent(eventName, userId) {
+            const params = getUrlParams();
+
+            const payload = {
+                event: eventName,
+                userId: userId,
+                ttclid: params.ttclid,
+                sessionId: SESSION_ID,
+                campaign: params.campaign,
+                adgroup: params.adgroup,
+                ad: params.ad,
+                contentId: CONFIG.CONTENT_ID,
+                contentType: 'product',
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                url: window.location.href
+            };
+
+            log(`[Track] Sending ${eventName}`);
+
             try {
-                const textarea = document.createElement('textarea');
-                textarea.value = text;
-                textarea.style.position = 'fixed';
-                textarea.style.left = '-999999px';
-                document.body.appendChild(textarea);
-                textarea.select();
-                const success = document.execCommand('copy');
-                document.body.removeChild(textarea);
-                return success;
-            } catch (e) {
-                log(`[Copy] Fallback failed: ${e.message}`);
-                return false;
+                const response = await fetch(CONFIG.N8N_WEBHOOK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    log(`[Track] Success`);
+                } else {
+                    log(`[Track] Failed: ${response.status}`);
+                }
+            } catch (error) {
+                log(`[Track] Error: ${error.message}`);
             }
         }
-    }
 
-    async function openLineApp() {
-        log('[Action] openLineApp called');
-        const lineAppUrl = getLineAppUrl();
-        try {
-            if (isInAppBrowser() && !(typeof liff !== 'undefined' && liff.isInClient())) {
-                const copied = await copyToClipboard(lineAppUrl);
-                log(`[Action] Copy result: ${copied}`);
-                alert(`請在瀏覽器貼上後改用 LINE 開啟：\n${lineAppUrl}`);
-                window.location.href = lineAppUrl;
+        // 開啟 LINE 對話
+        function openLineChat() {
+            const chatUrl = `https://line.me/R/oaMessage/${CONFIG.LINE_OA_ID}/`;
+            log(`[LINE] Opening: ${chatUrl}`);
+
+            if (typeof liff !== 'undefined' && liff.isInClient()) {
+                liff.openWindow({ url: chatUrl, external: false });
             } else {
-                window.location.href = lineAppUrl;
+                window.location.href = chatUrl;
             }
-        } catch (e) {
-            log(`[Error] openLineApp: ${e.message}`);
-            alert(`操作失敗：${e.message}`);
         }
-    }
 
-    function hideAll() {
-        elements.loading.style.display = 'none';
-        elements.loginOptions.style.display = 'none';
-        elements.content.style.display = 'none';
-        elements.error.style.display = 'none';
-    }
+        // 複製連結到剪貼簿
+        async function copyToClipboard(text) {
+            log('[Copy] Starting copy...');
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    log('[Copy] Using navigator.clipboard');
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                }
+                throw new Error('Clipboard API not available');
+            } catch (err) {
+                log(`[Copy] Clipboard API failed: ${err.message}, trying fallback`);
+                // Fallback
+                try {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    log(`[Copy] Fallback result: ${successful}`);
+                    return successful;
+                } catch (e) {
+                    log(`[Copy] Fallback failed: ${e.message}`);
+                    return false;
+                }
+            }
+        }
 
-    function showError(message) {
-        hideAll();
-        elements.error.style.display = 'block';
-        elements.error.textContent = message;
-    }
+        // 開啟 LINE App（處理 In-App Browser）
+        async function openLineApp() {
+            log('[Action] openLineApp called');
+            const lineAppUrl = getLineAppUrl();
 
-    function showContent() {
-        hideAll();
-        elements.content.style.display = 'block';
-    }
+            try {
+                if (isInAppBrowser()) {
+                    log('[Browser] In-App Browser detected');
 
-    function showLoginOptions() {
-        hideAll();
-        elements.loginOptions.style.display = 'block';
-    }
+                    const copied = await copyToClipboard(lineAppUrl);
+                    log(`[Action] Copy result: ${copied}`);
 
-    async function initApp() {
-        log('[LIFF] Initializing...');
-        log(`[Session] ${SESSION_ID}`);
+                    if (copied) {
+                        alert('連結已複製！\n\n由於目前瀏覽器不支援直接開啟 LINE，請切換到 Safari 或 Chrome 貼上連結開啟。');
+                    } else {
+                        // 如果自動複製失敗，顯示 prompt 讓使用者手動複製
+                        prompt('請手動複製以下連結，並在 Safari/Chrome 中開啟：', lineAppUrl);
+                    }
+                } else {
+                    log('[Browser] Standard browser, redirecting...');
+                    window.location.href = lineAppUrl;
+                }
+            } catch (e) {
+                log(`[Error] openLineApp: ${e.message}`);
+                alert(`發生錯誤: ${e.message}`);
+            }
+        }
 
-        try {
-            await liff.init({ liffId: CONFIG.LIFF_ID });
-            log('[LIFF] Init OK');
-            log(`[LIFF] Client: ${liff.isInClient()}`);
-            log(`[LIFF] LoggedIn: ${liff.isLoggedIn()}`);
+        // 隱藏所有畫面
+        function hideAll() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('loginOptions').style.display = 'none';
+            document.getElementById('content').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+        }
 
-            if (!liff.isLoggedIn()) {
+        // 顯示錯誤
+        function showError(message) {
+            hideAll();
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').textContent = message;
+        }
+
+        // 顯示內容
+        function showContent() {
+            hideAll();
+            document.getElementById('content').style.display = 'block';
+        }
+
+        // 顯示登入選項
+        function showLoginOptions() {
+            hideAll();
+            document.getElementById('loginOptions').style.display = 'block';
+        }
+
+        // 初始化 LIFF
+        async function initApp() {
+            log('[LIFF] Initializing...');
+            log(`[Session] ${SESSION_ID}`);
+
+            try {
+                await liff.init({ liffId: CONFIG.LIFF_ID });
+                log('[LIFF] Init OK');
+                log(`[LIFF] Client: ${liff.isInClient()}`);
+                log(`[LIFF] LoggedIn: ${liff.isLoggedIn()}`);
+
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    log(`[User] ${profile.userId}`);
+                    await trackEvent('ViewContent', profile.userId);
+                    showContent();
+                    return;
+                }
+
+                log('[LIFF] Showing login options');
                 showLoginOptions();
-                await trackEvent('ViewContent', 'guest');
-                return;
+
+            } catch (error) {
+                log(`[LIFF] Error: ${error.message}`);
+                showError('載入失敗: ' + error.message);
             }
-
-            const profile = await liff.getProfile();
-            log(`[User] ${profile.userId}`);
-            await trackEvent('ViewContent', profile.userId);
-            showContent();
-        } catch (error) {
-            log(`[LIFF] Error: ${error.message}`);
-            showError(`載入失敗：${error.message}`);
         }
-    }
 
-    document.getElementById('openChatBtn').addEventListener('click', async function () {
-        try {
-            this.disabled = true;
-            this.textContent = '跳轉中...';
-            liff.getProfile().then((p) => trackEvent('ClickButton', p.userId)).catch((e) => log(e));
-            setTimeout(() => openLineChat(), 500);
-        } catch (e) {
-            log(`[Error] Chat: ${e}`);
-            openLineChat();
-        }
-    });
+        // 按鈕事件 - 開始對話
+        document.getElementById('openChatBtn').addEventListener('click', async function () {
+            try {
+                this.disabled = true;
+                this.textContent = '跳轉中...';
 
-    document.getElementById('openLineAppBtn').addEventListener('click', function () {
-        log('[Click] Open LINE App Button');
-        openLineApp();
-    });
+                // 嘗試並行處理，不要讓 track 阻塞跳轉
+                liff.getProfile().then(p => trackEvent('ClickButton', p.userId)).catch(e => log(e));
 
-    document.getElementById('loginBtn').addEventListener('click', function () {
-        log('[Click] Login Button');
-        try {
-            liff.login({ redirectUri: window.location.href });
-        } catch (e) {
-            log(`[Error] Login: ${e.message}`);
-            alert('登入失敗：' + e.message);
-        }
-    });
+                setTimeout(() => openLineChat(), 500);
+            } catch (e) {
+                log(`[Error] Chat: ${e}`);
+                openLineChat();
+            }
+        });
 
-    document.addEventListener('DOMContentLoaded', function () {
-        log('[App] DOM loaded');
-        initApp();
-    });
-</script>
+        // 按鈕事件 - 使用 LINE App 開啟
+        document.getElementById('openLineAppBtn').addEventListener('click', function () {
+            log('[Click] Open LINE App Button');
+            openLineApp();
+        });
+
+        // 按鈕事件 - 使用帳號密碼登入
+        document.getElementById('loginBtn').addEventListener('click', function () {
+            log('[Click] Login Button');
+            try {
+                liff.login();
+            } catch (e) {
+                log(`[Error] Login: ${e.message}`);
+                alert('登入啟動失敗: ' + e.message);
+            }
+        });
+
+        // 頁面載入時初始化
+        document.addEventListener('DOMContentLoaded', function () {
+            log('[App] DOM loaded');
+            initApp();
+        });
+    </script>
 </body>
+
 </html>
