@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>歡迎</title>
+    <title>David鐵板燒</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -47,10 +47,29 @@
             transition: transform 0.2s;
         }
         .btn:hover { transform: scale(1.05); }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         #loading { font-size: 18px; }
         #content { display: none; }
-        .error { background: rgba(255,255,255,0.2); padding: 16px; border-radius: 8px; margin-top: 20px; }
+        .error { 
+            background: rgba(255,255,255,0.2); 
+            padding: 16px; 
+            border-radius: 8px; 
+            margin-top: 20px; 
+        }
+        .debug {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: #0f0;
+            font-size: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 100px;
+            overflow-y: auto;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -66,14 +85,28 @@
         </div>
         <div id="error" class="error" style="display:none;"></div>
     </div>
+    <div id="debug" class="debug"></div>
 
     <script>
-    // ====== 設定 ======
+    // ====== 設定區 ======
     const CONFIG = {
         LIFF_ID: '2008632026-9EqRbegz',
-        LINE_OA_ID: '@662sordy',  // 請確認你的 LINE OA Basic ID
-        N8N_WEBHOOK: 'https://tk2line.zeabur.app/webhook/liff-tracking'
+        LINE_OA_ID: '@662sordy',
+        N8N_WEBHOOK: 'https://tk2line.zeabur.app/webhook/liff-tracking',
+        CONTENT_ID: 'david_teppanyaki',
+        DEBUG: false  // 設為 true 可開啟除錯模式
     };
+
+    // 除錯日誌
+    function log(message) {
+        console.log(message);
+        if (CONFIG.DEBUG) {
+            const debugEl = document.getElementById('debug');
+            debugEl.style.display = 'block';
+            debugEl.innerHTML += message + '<br>';
+            debugEl.scrollTop = debugEl.scrollHeight;
+        }
+    }
 
     // 取得 URL 參數
     function getUrlParams() {
@@ -90,34 +123,45 @@
     async function trackEvent(eventName, userId) {
         const params = getUrlParams();
         
+        const payload = {
+            event: eventName,
+            userId: userId,
+            ttclid: params.ttclid,
+            campaign: params.campaign,
+            adgroup: params.adgroup,
+            ad: params.ad,
+            content_id: CONFIG.CONTENT_ID,
+            content_type: 'product',
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            url: window.location.href
+        };
+
+        log(`[Track] Sending ${eventName}...`);
+        
         try {
-            await fetch(CONFIG.N8N_WEBHOOK, {
+            const response = await fetch(CONFIG.N8N_WEBHOOK, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    event: eventName,
-                    userId: userId,
-                    ttclid: params.ttclid,
-                    campaign: params.campaign,
-                    adgroup: params.adgroup,
-                    ad: params.ad,
-                    content_id: 'david_teppanyaki_line',  // 加入 content_id
-                    timestamp: new Date().toISOString(),
-                    userAgent: navigator.userAgent,
-                    url: window.location.href
-                })
+                body: JSON.stringify(payload)
             });
-            console.log(`[Track] ${eventName} sent`);
+            
+            if (response.ok) {
+                log(`[Track] ${eventName} sent successfully`);
+            } else {
+                log(`[Track] ${eventName} failed: ${response.status}`);
+            }
         } catch (error) {
-            console.error(`[Track] ${eventName} failed:`, error);
+            log(`[Track] ${eventName} error: ${error.message}`);
         }
     }
 
     // 開啟 LINE 對話
     function openLineChat() {
         const chatUrl = `https://line.me/R/oaMessage/${CONFIG.LINE_OA_ID}/`;
+        log(`[LINE] Opening: ${chatUrl}`);
         
-        if (liff.isInClient()) {
+        if (typeof liff !== 'undefined' && liff.isInClient()) {
             liff.openWindow({ url: chatUrl, external: false });
         } else {
             window.location.href = chatUrl;
@@ -131,55 +175,80 @@
         document.getElementById('error').textContent = message;
     }
 
-    // 初始化
+    // 顯示內容
+    function showContent() {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+    }
+
+    // 初始化 LIFF
     async function initApp() {
+        log('[LIFF] Initializing...');
+        
         try {
             await liff.init({ liffId: CONFIG.LIFF_ID });
-            console.log('[LIFF] Initialized');
+            log('[LIFF] Initialized successfully');
+            log(`[LIFF] isInClient: ${liff.isInClient()}`);
+            log(`[LIFF] isLoggedIn: ${liff.isLoggedIn()}`);
 
             // 檢查登入狀態
             if (!liff.isLoggedIn()) {
-                console.log('[LIFF] Not logged in, redirecting...');
+                log('[LIFF] Not logged in, redirecting to login...');
                 liff.login();
                 return;
             }
 
             // 取得用戶資料
             const profile = await liff.getProfile();
-            console.log('[LIFF] User ID:', profile.userId);
+            log(`[LIFF] User ID: ${profile.userId}`);
+            log(`[LIFF] Display Name: ${profile.displayName}`);
+
+            // 取得 URL 參數
+            const params = getUrlParams();
+            log(`[Params] ttclid: ${params.ttclid}`);
+            log(`[Params] campaign: ${params.campaign}`);
 
             // 追蹤 ViewContent 事件（Upper Funnel）
             await trackEvent('ViewContent', profile.userId);
 
             // 顯示內容
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('content').style.display = 'block';
+            showContent();
 
         } catch (error) {
-            console.error('[LIFF] Error:', error);
+            log(`[LIFF] Error: ${error.message}`);
+            console.error('[LIFF] Full error:', error);
             showError('載入失敗，請重試');
         }
     }
 
     // 按鈕點擊事件
     document.getElementById('openChatBtn').addEventListener('click', async function() {
-        this.disabled = true;
-        this.textContent = '跳轉中...';
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = '跳轉中...';
 
         try {
-            // 追蹤 ClickButton 事件（Middle Funnel）
+            // 取得用戶資料
             const profile = await liff.getProfile();
+            
+            // 追蹤 ClickButton 事件（Middle Funnel）
             await trackEvent('ClickButton', profile.userId);
-        } catch (e) {
-            console.error('[Track] ClickButton failed:', e);
+
+        } catch (error) {
+            log(`[Track] ClickButton error: ${error.message}`);
         }
 
-        // 延遲後開啟 LINE
-        setTimeout(openLineChat, 500);
+        // 延遲後開啟 LINE 對話
+        setTimeout(() => {
+            openLineChat();
+        }, 500);
     });
 
-    // 啟動
-    initApp();
+    // 頁面載入時初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        log('[App] DOM loaded, starting init...');
+        initApp();
+    });
     </script>
 </body>
 </html>
