@@ -315,32 +315,22 @@
             }
         }
 
-        // 開啟 LINE App（處理 In-App Browser）
-        async function openLineApp() {
+        // 開啟 LINE App (直接跳轉加好友/官方帳號頁面)
+        function openLineApp() {
             log('[Action] openLineApp called');
-            const lineAppUrl = getLineAppUrl();
 
-            try {
-                if (isInAppBrowser()) {
-                    log('[Browser] In-App Browser detected');
+            // 使用 LINE 加好友/官方帳號的 Universal Link
+            // 格式: https://line.me/R/ti/p/{BasicID}
+            // 您的 ID: @662sordy
+            const addFriendUrl = `https://line.me/R/ti/p/${CONFIG.LINE_OA_ID}`;
 
-                    const copied = await copyToClipboard(lineAppUrl);
-                    log(`[Action] Copy result: ${copied}`);
+            log(`[Redirect] Going to: ${addFriendUrl}`);
 
-                    if (copied) {
-                        alert('連結已複製！\n\n由於目前瀏覽器不支援直接開啟 LINE，請切換到 Safari 或 Chrome 貼上連結開啟。');
-                    } else {
-                        // 如果自動複製失敗，顯示 prompt 讓使用者手動複製
-                        prompt('請手動複製以下連結，並在 Safari/Chrome 中開啟：', lineAppUrl);
-                    }
-                } else {
-                    log('[Browser] Standard browser, redirecting...');
-                    window.location.href = lineAppUrl;
-                }
-            } catch (e) {
-                log(`[Error] openLineApp: ${e.message}`);
-                alert(`發生錯誤: ${e.message}`);
-            }
+            // 嘗試發送點擊事件 (Fire and forget，不等待回應)
+            trackEvent('ClickOpenLineApp', 'anonymous').catch(e => console.error(e));
+
+            // 直接跳轉，這是最穩定的方式
+            window.location.href = addFriendUrl;
         }
 
         // 隱藏所有畫面
