@@ -186,6 +186,34 @@
             }
         }
 
+        // 偵測是否在 In-App Browser 中
+        function isInAppBrowser() {
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            // 偵測常見的 In-App Browser
+            const inAppPatterns = [
+                'FBAN', 'FBAV',           // Facebook
+                'Instagram',               // Instagram
+                'Line/',                   // LINE 內建瀏覽器（非 LIFF）
+                'Twitter',                 // Twitter/X
+                'BytedanceWebview',        // TikTok
+                'musical_ly',              // TikTok (舊版)
+                'TikTok',                  // TikTok
+                'Snapchat',                // Snapchat
+                'Pinterest',               // Pinterest
+                'LinkedInApp',             // LinkedIn
+                'KAKAOTALK',               // KakaoTalk
+                'WeChat', 'MicroMessenger' // WeChat
+            ];
+
+            for (const pattern of inAppPatterns) {
+                if (ua.indexOf(pattern) > -1) {
+                    log(`[Browser] Detected In-App Browser: ${pattern}`);
+                    return true;
+                }
+            }
+            return false;
+        }
+
         // 取得 URL 參數
         function getUrlParams() {
             const params = new URLSearchParams(window.location.search);
@@ -197,7 +225,7 @@
             };
         }
 
-        // 取得 LINE App URL (使用 HTTPS 格式，支援 in-app browser)
+        // 取得 LINE App URL (使用 HTTPS 格式)
         function getLineAppUrl() {
             const params = window.location.search;
             return `https://liff.line.me/${CONFIG.LIFF_ID}${params}`;
@@ -253,10 +281,50 @@
             }
         }
 
-        // 開啟 LINE App
-        function openLineApp() {
+        // 複製連結到剪貼簿
+        async function copyToClipboard(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } catch (err) {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    return true;
+                } catch (e) {
+                    document.body.removeChild(textArea);
+                    return false;
+                }
+            }
+        }
+
+        // 開啟 LINE App（處理 In-App Browser）
+        async function openLineApp() {
             const lineAppUrl = getLineAppUrl();
             log(`[LINE] Opening LINE App: ${lineAppUrl}`);
+
+            if (isInAppBrowser()) {
+                // 在 In-App Browser 中，顯示提示
+                log('[Browser] In-App Browser detected, showing copy dialog');
+
+                const copied = await copyToClipboard(lineAppUrl);
+
+                if (copied) {
+                    alert('連結已複製！\n\n請在系統瀏覽器（Safari/Chrome）中貼上此連結開啟。\n\n📋 已複製連結：\n' + lineAppUrl);
+                } else {
+                    alert('請複製以下連結，在系統瀏覽器（Safari/Chrome）中開啟：\n\n' + lineAppUrl);
+                }
+                return;
+            }
+
+            // 不是 In-App Browser，直接跳轉
             window.location.href = lineAppUrl;
         }
 
@@ -291,6 +359,8 @@
         async function initApp() {
             log('[LIFF] Initializing...');
             log(`[Session] ID: ${SESSION_ID}`);
+            log(`[Browser] User Agent: ${navigator.userAgent}`);
+            log(`[Browser] Is In-App: ${isInAppBrowser()}`);
 
             try {
                 await liff.init({ liffId: CONFIG.LIFF_ID });
