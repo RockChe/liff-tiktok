@@ -140,7 +140,7 @@
             </div>
             <h1>David鐵板燒</h1>
             <p>感謝您的興趣！<br>點擊下方按鈕與我們對話</p>
-            <button class="btn" id="openChatBtn">開始對話</button>
+            <button class="btn" id="openChatBtn">Contact</button>
         </div>
 
         <div id="error" class="error" style="display:none;"></div>
@@ -159,25 +159,9 @@
         // 產生 Session ID
         const SESSION_ID = Date.now().toString();
 
-        // 儲存 IP（頁面載入時取得一次）
-        let USER_IP = '';
-
         // 一般日誌
         function log(message) {
             console.log(message);
-        }
-
-        // 取得用戶 IP
-        async function getUserIP() {
-            try {
-                const response = await fetch('https://api.ipify.org?format=json');
-                const data = await response.json();
-                log(`[IP] Got IP: ${data.ip}`);
-                return data.ip;
-            } catch (error) {
-                log(`[IP] Failed: ${error.message}`);
-                return '';
-            }
         }
 
         // 偵測是否在 In-App Browser 中
@@ -244,7 +228,6 @@
                 test_event_code: 'TEST48725', // TikTok Test Events Code
                 timestamp: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                userIP: USER_IP,
                 url: window.location.href
             };
 
@@ -322,7 +305,7 @@
             log(`[Redirect] Going to: ${addFriendUrl}`);
 
             // 嘗試發送點擊事件 (Fire and forget，不等待回應)
-            trackEvent('ClickOpenLineApp', 'anonymous').catch(e => console.error(e));
+            trackEvent('ClickButton', 'anonymous').catch(e => console.error(e));
 
             // 直接跳轉，這是最穩定的方式
             window.location.href = addFriendUrl;
@@ -360,9 +343,6 @@
             log('[LIFF] Initializing...');
             log(`[Session] ${SESSION_ID}`);
 
-            // 先取得 IP
-            USER_IP = await getUserIP();
-
             try {
                 await liff.init({ liffId: CONFIG.LIFF_ID });
                 log('[LIFF] Init OK');
@@ -395,7 +375,7 @@
                 this.textContent = '跳轉中...';
 
                 // 嘗試並行處理，不要讓 track 阻塞跳轉
-                liff.getProfile().then(p => trackEvent('ClickButton', p.userId)).catch(e => log(e));
+                liff.getProfile().then(p => trackEvent('SubmitForm', p.userId)).catch(e => log(e));
 
                 setTimeout(() => openLineChat(), 500);
             } catch (e) {
