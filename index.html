@@ -45,12 +45,21 @@
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             transition: transform 0.2s;
+            display: inline-block;
+            text-decoration: none;
+            margin: 8px;
         }
         .btn:hover { transform: scale(1.05); }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+        }
         #loading { font-size: 18px; }
         #content { display: none; }
         #redirecting { display: none; font-size: 16px; line-height: 1.6; }
+        #fallback { display: none; font-size: 16px; line-height: 1.6; }
         .error { 
             background: rgba(255,255,255,0.2); 
             padding: 16px; 
@@ -76,11 +85,24 @@
 <body>
     <div class="container">
         <div id="loading">載入中...</div>
+        
         <div id="redirecting">
+            <div class="logo">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            </div>
             正在開啟 LINE...<br><br>
-            <small>如果沒有自動開啟，請點擊下方按鈕</small><br><br>
-            <button class="btn" id="manualOpenBtn" style="font-size: 14px; padding: 12px 32px;">開啟 LINE</button>
         </div>
+        
+        <div id="fallback">
+            <div class="logo">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            </div>
+            <h1>David鐵板燒</h1>
+            <p>請選擇開啟方式</p>
+            <button class="btn" id="openLineAppBtn">使用 LINE 開啟</button><br>
+            <button class="btn btn-secondary" id="loginBtn">使用帳號登入</button>
+        </div>
+        
         <div id="content">
             <div class="logo">
                 <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
@@ -89,6 +111,7 @@
             <p>感謝您的興趣！<br>點擊下方按鈕與我們對話</p>
             <button class="btn" id="openChatBtn">開始對話</button>
         </div>
+        
         <div id="error" class="error" style="display:none;"></div>
     </div>
     <div id="debug" class="debug"></div>
@@ -103,7 +126,7 @@
         DEBUG: false
     };
 
-    // 產生 Session ID（頁面載入時產生，整個 session 共用）
+    // 產生 Session ID
     const SESSION_ID = Date.now().toString();
 
     // 除錯日誌
@@ -128,10 +151,10 @@
         };
     }
 
-    // 取得 LIFF URL（保留參數）
-    function getLiffUrl() {
+    // 取得 LINE App URL Scheme
+    function getLineAppUrl() {
         const params = window.location.search;
-        return `https://liff.line.me/${CONFIG.LIFF_ID}${params}`;
+        return `line://app/${CONFIG.LIFF_ID}${params}`;
     }
 
     // 發送事件到 n8n
@@ -184,32 +207,45 @@
         }
     }
 
-    // 導向 LINE App
-    function redirectToLineApp() {
-        const liffUrl = getLiffUrl();
-        log(`[Redirect] Opening LINE App: ${liffUrl}`);
-        window.location.href = liffUrl;
+    // 開啟 LINE App
+    function openLineApp() {
+        const lineAppUrl = getLineAppUrl();
+        log(`[LINE] Opening LINE App: ${lineAppUrl}`);
+        window.location.href = lineAppUrl;
+    }
+
+    // 隱藏所有畫面
+    function hideAll() {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('redirecting').style.display = 'none';
+        document.getElementById('fallback').style.display = 'none';
+        document.getElementById('content').style.display = 'none';
+        document.getElementById('error').style.display = 'none';
     }
 
     // 顯示錯誤
     function showError(message) {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('redirecting').style.display = 'none';
+        hideAll();
         document.getElementById('error').style.display = 'block';
         document.getElementById('error').textContent = message;
     }
 
     // 顯示內容
     function showContent() {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('redirecting').style.display = 'none';
+        hideAll();
         document.getElementById('content').style.display = 'block';
     }
 
     // 顯示導向中畫面
     function showRedirecting() {
-        document.getElementById('loading').style.display = 'none';
+        hideAll();
         document.getElementById('redirecting').style.display = 'block';
+    }
+
+    // 顯示備用選項
+    function showFallback() {
+        hideAll();
+        document.getElementById('fallback').style.display = 'block';
     }
 
     // 初始化 LIFF
@@ -223,14 +259,19 @@
             log(`[LIFF] isInClient: ${liff.isInClient()}`);
             log(`[LIFF] isLoggedIn: ${liff.isLoggedIn()}`);
 
-            // 如果不在 LINE App 內，導向 LINE App 開啟
+            // 如果不在 LINE App 內
             if (!liff.isInClient()) {
-                log('[LIFF] Not in LINE App, redirecting...');
+                log('[LIFF] Not in LINE App');
                 showRedirecting();
                 
-                // 延遲一下再導向，讓用戶看到提示
+                // 嘗試使用 URL Scheme 開啟 LINE App
                 setTimeout(() => {
-                    redirectToLineApp();
+                    openLineApp();
+                    
+                    // 3 秒後如果還在頁面上，顯示備用選項
+                    setTimeout(() => {
+                        showFallback();
+                    }, 3000);
                 }, 500);
                 return;
             }
@@ -248,9 +289,8 @@
             log(`[LIFF] Display Name: ${profile.displayName}`);
 
             // 取得 URL 參數
-            const params = getUrlParams();
-            log(`[Params] ttclid: ${params.ttclid}`);
-            log(`[Params] campaign: ${params.campaign}`);
+            const urlParams = getUrlParams();
+            log(`[Params] ttclid: ${urlParams.ttclid}`);
             log(`[Params] sessionId: ${SESSION_ID}`);
 
             // 追蹤 ViewContent 事件
@@ -266,7 +306,7 @@
         }
     }
 
-    // 按鈕點擊事件 - 開始對話
+    // 按鈕事件 - 開始對話
     document.getElementById('openChatBtn').addEventListener('click', async function() {
         const btn = this;
         btn.disabled = true;
@@ -284,9 +324,14 @@
         }, 500);
     });
 
-    // 按鈕點擊事件 - 手動開啟 LINE
-    document.getElementById('manualOpenBtn').addEventListener('click', function() {
-        redirectToLineApp();
+    // 按鈕事件 - 使用 LINE 開啟
+    document.getElementById('openLineAppBtn').addEventListener('click', function() {
+        openLineApp();
+    });
+
+    // 按鈕事件 - 使用帳號登入
+    document.getElementById('loginBtn').addEventListener('click', function() {
+        liff.login();
     });
 
     // 頁面載入時初始化
