@@ -50,6 +50,7 @@
         .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         #loading { font-size: 18px; }
         #content { display: none; }
+        #redirecting { display: none; font-size: 16px; line-height: 1.6; }
         .error { 
             background: rgba(255,255,255,0.2); 
             padding: 16px; 
@@ -75,6 +76,11 @@
 <body>
     <div class="container">
         <div id="loading">載入中...</div>
+        <div id="redirecting">
+            正在開啟 LINE...<br><br>
+            <small>如果沒有自動開啟，請點擊下方按鈕</small><br><br>
+            <button class="btn" id="manualOpenBtn" style="font-size: 14px; padding: 12px 32px;">開啟 LINE</button>
+        </div>
         <div id="content">
             <div class="logo">
                 <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
@@ -94,8 +100,11 @@
         LINE_OA_ID: '@662sordy',
         N8N_WEBHOOK: 'https://tk2line.zeabur.app/webhook/liff-tracking',
         CONTENT_ID: 'david_teppanyaki',
-        DEBUG: false  // 設為 true 可開啟除錯模式
+        DEBUG: false
     };
+
+    // 產生 Session ID（頁面載入時產生，整個 session 共用）
+    const SESSION_ID = Date.now().toString();
 
     // 除錯日誌
     function log(message) {
@@ -119,6 +128,12 @@
         };
     }
 
+    // 取得 LIFF URL（保留參數）
+    function getLiffUrl() {
+        const params = window.location.search;
+        return `https://liff.line.me/${CONFIG.LIFF_ID}${params}`;
+    }
+
     // 發送事件到 n8n
     async function trackEvent(eventName, userId) {
         const params = getUrlParams();
@@ -127,17 +142,18 @@
             event: eventName,
             userId: userId,
             ttclid: params.ttclid,
+            sessionId: SESSION_ID,
             campaign: params.campaign,
             adgroup: params.adgroup,
             ad: params.ad,
-            content_id: CONFIG.CONTENT_ID,
-            content_type: 'product',
+            contentId: CONFIG.CONTENT_ID,
+            contentType: 'product',
             timestamp: new Date().toISOString(),
             userAgent: navigator.userAgent,
             url: window.location.href
         };
 
-        log(`[Track] Sending ${eventName}...`);
+        log(`[Track] Sending ${eventName} with sessionId: ${SESSION_ID}`);
         
         try {
             const response = await fetch(CONFIG.N8N_WEBHOOK, {
@@ -168,9 +184,17 @@
         }
     }
 
+    // 導向 LINE App
+    function redirectToLineApp() {
+        const liffUrl = getLiffUrl();
+        log(`[Redirect] Opening LINE App: ${liffUrl}`);
+        window.location.href = liffUrl;
+    }
+
     // 顯示錯誤
     function showError(message) {
         document.getElementById('loading').style.display = 'none';
+        document.getElementById('redirecting').style.display = 'none';
         document.getElementById('error').style.display = 'block';
         document.getElementById('error').textContent = message;
     }
@@ -178,12 +202,20 @@
     // 顯示內容
     function showContent() {
         document.getElementById('loading').style.display = 'none';
+        document.getElementById('redirecting').style.display = 'none';
         document.getElementById('content').style.display = 'block';
+    }
+
+    // 顯示導向中畫面
+    function showRedirecting() {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('redirecting').style.display = 'block';
     }
 
     // 初始化 LIFF
     async function initApp() {
         log('[LIFF] Initializing...');
+        log(`[Session] ID: ${SESSION_ID}`);
         
         try {
             await liff.init({ liffId: CONFIG.LIFF_ID });
@@ -191,7 +223,19 @@
             log(`[LIFF] isInClient: ${liff.isInClient()}`);
             log(`[LIFF] isLoggedIn: ${liff.isLoggedIn()}`);
 
-            // 檢查登入狀態
+            // 如果不在 LINE App 內，導向 LINE App 開啟
+            if (!liff.isInClient()) {
+                log('[LIFF] Not in LINE App, redirecting...');
+                showRedirecting();
+                
+                // 延遲一下再導向，讓用戶看到提示
+                setTimeout(() => {
+                    redirectToLineApp();
+                }, 500);
+                return;
+            }
+
+            // 在 LINE App 內，檢查登入狀態
             if (!liff.isLoggedIn()) {
                 log('[LIFF] Not logged in, redirecting to login...');
                 liff.login();
@@ -207,8 +251,9 @@
             const params = getUrlParams();
             log(`[Params] ttclid: ${params.ttclid}`);
             log(`[Params] campaign: ${params.campaign}`);
+            log(`[Params] sessionId: ${SESSION_ID}`);
 
-            // 追蹤 ViewContent 事件（Upper Funnel）
+            // 追蹤 ViewContent 事件
             await trackEvent('ViewContent', profile.userId);
 
             // 顯示內容
@@ -221,27 +266,27 @@
         }
     }
 
-    // 按鈕點擊事件
+    // 按鈕點擊事件 - 開始對話
     document.getElementById('openChatBtn').addEventListener('click', async function() {
         const btn = this;
         btn.disabled = true;
         btn.textContent = '跳轉中...';
 
         try {
-            // 取得用戶資料
             const profile = await liff.getProfile();
-            
-            // 追蹤 ClickButton 事件（Middle Funnel）
             await trackEvent('ClickButton', profile.userId);
-
         } catch (error) {
             log(`[Track] ClickButton error: ${error.message}`);
         }
 
-        // 延遲後開啟 LINE 對話
         setTimeout(() => {
             openLineChat();
         }, 500);
+    });
+
+    // 按鈕點擊事件 - 手動開啟 LINE
+    document.getElementById('manualOpenBtn').addEventListener('click', function() {
+        redirectToLineApp();
     });
 
     // 頁面載入時初始化
