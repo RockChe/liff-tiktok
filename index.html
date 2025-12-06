@@ -359,6 +359,8 @@
                 }
 
                 log('[LIFF] Showing login options');
+                // Track ViewContent for anonymous users (external browsers)
+                await trackEvent('ViewContent', 'anonymous');
                 showLoginOptions();
 
             } catch (error) {
