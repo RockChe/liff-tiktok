@@ -45,9 +45,11 @@
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             transition: transform 0.2s;
-            display: inline-block;
+            display: block;
+            width: 100%;
+            max-width: 280px;
+            margin: 12px auto;
             text-decoration: none;
-            margin: 8px;
         }
         .btn:hover { transform: scale(1.05); }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
@@ -55,11 +57,11 @@
             background: transparent;
             border: 2px solid white;
             color: white;
+            box-shadow: none;
         }
         #loading { font-size: 18px; }
+        #loginOptions { display: none; }
         #content { display: none; }
-        #redirecting { display: none; font-size: 16px; line-height: 1.6; }
-        #fallback { display: none; font-size: 16px; line-height: 1.6; }
         .error { 
             background: rgba(255,255,255,0.2); 
             padding: 16px; 
@@ -86,21 +88,14 @@
     <div class="container">
         <div id="loading">載入中...</div>
         
-        <div id="redirecting">
-            <div class="logo">
-                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-            </div>
-            正在開啟 LINE...<br><br>
-        </div>
-        
-        <div id="fallback">
+        <div id="loginOptions">
             <div class="logo">
                 <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
             </div>
             <h1>David鐵板燒</h1>
-            <p>請選擇開啟方式</p>
-            <button class="btn" id="openLineAppBtn">使用 LINE 開啟</button><br>
-            <button class="btn btn-secondary" id="loginBtn">使用帳號登入</button>
+            <p>請選擇登入方式</p>
+            <button class="btn" id="openLineAppBtn">使用 LINE App 開啟</button>
+            <button class="btn btn-secondary" id="loginBtn">使用帳號密碼登入</button>
         </div>
         
         <div id="content">
@@ -217,8 +212,7 @@
     // 隱藏所有畫面
     function hideAll() {
         document.getElementById('loading').style.display = 'none';
-        document.getElementById('redirecting').style.display = 'none';
-        document.getElementById('fallback').style.display = 'none';
+        document.getElementById('loginOptions').style.display = 'none';
         document.getElementById('content').style.display = 'none';
         document.getElementById('error').style.display = 'none';
     }
@@ -236,16 +230,10 @@
         document.getElementById('content').style.display = 'block';
     }
 
-    // 顯示導向中畫面
-    function showRedirecting() {
+    // 顯示登入選項
+    function showLoginOptions() {
         hideAll();
-        document.getElementById('redirecting').style.display = 'block';
-    }
-
-    // 顯示備用選項
-    function showFallback() {
-        hideAll();
-        document.getElementById('fallback').style.display = 'block';
+        document.getElementById('loginOptions').style.display = 'block';
     }
 
     // 初始化 LIFF
@@ -259,45 +247,29 @@
             log(`[LIFF] isInClient: ${liff.isInClient()}`);
             log(`[LIFF] isLoggedIn: ${liff.isLoggedIn()}`);
 
-            // 如果不在 LINE App 內
-            if (!liff.isInClient()) {
-                log('[LIFF] Not in LINE App');
-                showRedirecting();
-                
-                // 嘗試使用 URL Scheme 開啟 LINE App
-                setTimeout(() => {
-                    openLineApp();
-                    
-                    // 3 秒後如果還在頁面上，顯示備用選項
-                    setTimeout(() => {
-                        showFallback();
-                    }, 3000);
-                }, 500);
+            // 如果已登入，直接顯示內容
+            if (liff.isLoggedIn()) {
+                // 取得用戶資料
+                const profile = await liff.getProfile();
+                log(`[LIFF] User ID: ${profile.userId}`);
+                log(`[LIFF] Display Name: ${profile.displayName}`);
+
+                // 取得 URL 參數
+                const urlParams = getUrlParams();
+                log(`[Params] ttclid: ${urlParams.ttclid}`);
+                log(`[Params] sessionId: ${SESSION_ID}`);
+
+                // 追蹤 ViewContent 事件
+                await trackEvent('ViewContent', profile.userId);
+
+                // 顯示內容
+                showContent();
                 return;
             }
 
-            // 在 LINE App 內，檢查登入狀態
-            if (!liff.isLoggedIn()) {
-                log('[LIFF] Not logged in, redirecting to login...');
-                liff.login();
-                return;
-            }
-
-            // 取得用戶資料
-            const profile = await liff.getProfile();
-            log(`[LIFF] User ID: ${profile.userId}`);
-            log(`[LIFF] Display Name: ${profile.displayName}`);
-
-            // 取得 URL 參數
-            const urlParams = getUrlParams();
-            log(`[Params] ttclid: ${urlParams.ttclid}`);
-            log(`[Params] sessionId: ${SESSION_ID}`);
-
-            // 追蹤 ViewContent 事件
-            await trackEvent('ViewContent', profile.userId);
-
-            // 顯示內容
-            showContent();
+            // 未登入，顯示登入選項
+            log('[LIFF] Not logged in, showing login options');
+            showLoginOptions();
 
         } catch (error) {
             log(`[LIFF] Error: ${error.message}`);
@@ -324,12 +296,12 @@
         }, 500);
     });
 
-    // 按鈕事件 - 使用 LINE 開啟
+    // 按鈕事件 - 使用 LINE App 開啟
     document.getElementById('openLineAppBtn').addEventListener('click', function() {
         openLineApp();
     });
 
-    // 按鈕事件 - 使用帳號登入
+    // 按鈕事件 - 使用帳號密碼登入
     document.getElementById('loginBtn').addEventListener('click', function() {
         liff.login();
     });
