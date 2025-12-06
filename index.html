@@ -293,22 +293,22 @@
             }
         }
 
-        // 開啟 LINE App (直接跳轉加好友/官方帳號頁面)
+        // 開啟 LINE App (直接跳轉對話頁面，未加好友會自動提示加好友)
         function openLineApp() {
             log('[Action] openLineApp called');
 
-            // 使用 LINE 加好友/官方帳號的 Universal Link
-            // 格式: https://line.me/R/ti/p/{BasicID}
-            // 您的 ID: @662sordy
-            const addFriendUrl = `https://line.me/R/ti/p/${CONFIG.LINE_OA_ID}`;
+            // 使用 LINE oaMessage URL
+            // 如果尚未加好友 → 顯示加好友提示 → 加完後直接開啟對話
+            // 如果已經是好友 → 直接開啟對話
+            const chatUrl = `https://line.me/R/oaMessage/${CONFIG.LINE_OA_ID}/`;
 
-            log(`[Redirect] Going to: ${addFriendUrl}`);
+            log(`[Redirect] Going to: ${chatUrl}`);
 
             // 嘗試發送點擊事件 (Fire and forget，不等待回應)
             trackEvent('ClickButton', 'anonymous').catch(e => console.error(e));
 
             // 直接跳轉，這是最穩定的方式
-            window.location.href = addFriendUrl;
+            window.location.href = chatUrl;
         }
 
         // 隱藏所有畫面
