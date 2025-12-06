@@ -154,45 +154,31 @@
             LINE_OA_ID: '@662sordy',
             N8N_WEBHOOK: 'https://tk2line.zeabur.app/webhook/liff-tracking',
             CONTENT_ID: 'david_teppanyaki',
-            DEBUG: false // 關閉除錯模式
+            DEBUG: false
         };
 
         // 產生 Session ID
         const SESSION_ID = Date.now().toString();
+
+        // 儲存 IP（頁面載入時取得一次）
+        let USER_IP = '';
 
         // 一般日誌
         function log(message) {
             console.log(message);
         }
 
-        // 偵測是否在 In-App Browser 中
-        function isInAppBrowser() {
-            const ua = navigator.userAgent || navigator.vendor || window.opera;
-            log(`[Check] UA: ${ua}`);
-
-            // 偵測常見的 In-App Browser
-            const inAppPatterns = [
-                'FBAN', 'FBAV',           // Facebook
-                'Instagram',               // Instagram
-                'Line/',                   // LINE 內建瀏覽器（非 LIFF）
-                'Twitter',                 // Twitter/X
-                'BytedanceWebview',        // TikTok
-                'musical_ly',              // TikTok (舊版)
-                'TikTok',                  // TikTok
-                'Snapchat',                // Snapchat
-                'Pinterest',               // Pinterest
-                'LinkedInApp',             // LinkedIn
-                'KAKAOTALK',               // KakaoTalk
-                'WeChat', 'MicroMessenger' // WeChat
-            ];
-
-            for (const pattern of inAppPatterns) {
-                if (ua.indexOf(pattern) > -1) {
-                    log(`[Browser] Detected In-App Browser: ${pattern}`);
-                    return true;
-                }
+        // 取得用戶 IP
+        async function getUserIP() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                log(`[IP] Got IP: ${data.ip}`);
+                return data.ip;
+            } catch (error) {
+                log(`[IP] Failed: ${error.message}`);
+                return '';
             }
-            return false;
         }
 
         // 取得 URL 參數
@@ -206,7 +192,7 @@
             };
         }
 
-        // 取得 LINE App URL (使用 HTTPS 格式)
+        // 取得 LINE App URL
         function getLineAppUrl() {
             const params = window.location.search;
             return `https://liff.line.me/${CONFIG.LIFF_ID}${params}`;
@@ -226,9 +212,9 @@
                 ad: params.ad,
                 contentId: CONFIG.CONTENT_ID,
                 contentType: 'product',
-                test_event_code: 'TEST48725', // TikTok Test Events Code
                 timestamp: new Date().toISOString(),
                 userAgent: navigator.userAgent,
+                userIP: USER_IP,
                 url: window.location.href
             };
 
@@ -263,52 +249,12 @@
             }
         }
 
-        // 複製連結到剪貼簿
-        async function copyToClipboard(text) {
-            log('[Copy] Starting copy...');
-            try {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    log('[Copy] Using navigator.clipboard');
-                    await navigator.clipboard.writeText(text);
-                    return true;
-                }
-                throw new Error('Clipboard API not available');
-            } catch (err) {
-                log(`[Copy] Clipboard API failed: ${err.message}, trying fallback`);
-                // Fallback
-                try {
-                    const textArea = document.createElement('textarea');
-                    textArea.value = text;
-                    textArea.style.position = 'fixed';
-                    textArea.style.left = '-999999px';
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    const successful = document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                    log(`[Copy] Fallback result: ${successful}`);
-                    return successful;
-                } catch (e) {
-                    log(`[Copy] Fallback failed: ${e.message}`);
-                    return false;
-                }
-            }
-        }
-
-        // 開啟 LINE App (直接跳轉加好友/官方帳號頁面)
+        // 開啟 LINE App
         function openLineApp() {
             log('[Action] openLineApp called');
-
-            // 使用 LINE 加好友/官方帳號的 Universal Link
-            // 格式: https://line.me/R/ti/p/{BasicID}
-            // 您的 ID: @662sordy
             const addFriendUrl = `https://line.me/R/ti/p/${CONFIG.LINE_OA_ID}`;
-
             log(`[Redirect] Going to: ${addFriendUrl}`);
-
-            // 嘗試發送點擊事件 (Fire and forget，不等待回應)
             trackEvent('ClickOpenLineApp', 'anonymous').catch(e => console.error(e));
-
-            // 直接跳轉，這是最穩定的方式
             window.location.href = addFriendUrl;
         }
 
@@ -344,6 +290,9 @@
             log('[LIFF] Initializing...');
             log(`[Session] ${SESSION_ID}`);
 
+            // 先取得 IP
+            USER_IP = await getUserIP();
+
             try {
                 await liff.init({ liffId: CONFIG.LIFF_ID });
                 log('[LIFF] Init OK');
@@ -359,8 +308,6 @@
                 }
 
                 log('[LIFF] Showing login options');
-                // Track ViewContent for anonymous users (external browsers)
-                await trackEvent('ViewContent', 'anonymous');
                 showLoginOptions();
 
             } catch (error) {
@@ -374,10 +321,7 @@
             try {
                 this.disabled = true;
                 this.textContent = '跳轉中...';
-
-                // 嘗試並行處理，不要讓 track 阻塞跳轉
                 liff.getProfile().then(p => trackEvent('ClickButton', p.userId)).catch(e => log(e));
-
                 setTimeout(() => openLineChat(), 500);
             } catch (e) {
                 log(`[Error] Chat: ${e}`);
