@@ -314,19 +314,23 @@
         }
 
         // 開啟 LINE App (直接跳轉對話頁面，未加好友會自動提示加好友)
-function openLineApp() {
-    log('[Action] openLineApp called');
-    
-    // 保留 URL 參數（ttclid, campaign 等）
-    const params = window.location.search;
-    
-    // 跳轉到 LIFF URL，在 LINE App 內開啟
-    const liffUrl = `https://liff.line.me/${CONFIG.LIFF_ID}${params}`;
-    
-    log(`[Redirect] Going to: ${liffUrl}`);
-    trackEvent('ClickButton', 'anonymous').catch(e => console.error(e));
-    window.location.href = liffUrl;
-}
+        function openLineApp() {
+            log('[Action] openLineApp called');
+
+            // 使用 LINE oaMessage URL
+            // 如果尚未加好友 → 顯示加好友提示 → 加完後直接開啟對話
+            // 如果已經是好友 → 直接開啟對話
+            const chatUrl = `https://line.me/R/oaMessage/${CONFIG.LINE_OA_ID}/`;
+
+            log(`[Redirect] Going to: ${chatUrl}`);
+
+            // 嘗試發送點擊事件 (Fire and forget，不等待回應)
+            trackEvent('ClickButton', 'anonymous').catch(e => console.error(e));
+
+            // 直接跳轉，這是最穩定的方式
+            window.location.href = chatUrl;
+        }
+
 
         // 隱藏所有畫面
         function hideAll() {
