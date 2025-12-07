@@ -282,35 +282,41 @@
             }
         }
 
-        // 開啟 LINE App（帶入 IP 和 session_id）
-        async function openLineApp() {
-            log('[Action] openLineApp called');
+// 開啟 LINE App（帶入 IP 和 session_id）
+async function openLineApp() {
+    log('[Action] openLineApp called');
 
-            // 取得 IP
-            const ip = await getIPAddress();
+    // 取得 IP
+    const ip = await getIPAddress();
 
-            // 保留 URL 參數，加入 IP 和 session_id
-            const urlParams = getUrlParams();
-            const params = new URLSearchParams();
+    // 保留 URL 參數，加入 IP 和 session_id
+    const urlParams = getUrlParams();
+    const params = new URLSearchParams();
 
-            if (urlParams.ttclid) params.set('ttclid', urlParams.ttclid);
-            if (urlParams.campaign) params.set('campaign', urlParams.campaign);
-            if (urlParams.adgroup) params.set('adgroup', urlParams.adgroup);
-            if (urlParams.ad) params.set('ad', urlParams.ad);
-            params.set('session_id', SESSION_ID);
-            if (ip) params.set('ip', ip);
+    if (urlParams.ttclid) params.set('ttclid', urlParams.ttclid);
+    if (urlParams.campaign) params.set('campaign', urlParams.campaign);
+    if (urlParams.adgroup) params.set('adgroup', urlParams.adgroup);
+    if (urlParams.ad) params.set('ad', urlParams.ad);
+    params.set('session_id', SESSION_ID);
+    if (ip) params.set('ip', ip);
 
-            // 跳轉到 LIFF URL（會在 LINE App 內開啟）
-            const liffUrl = `https://liff.line.me/${CONFIG.LIFF_ID}?${params.toString()}`;
+    // 發送 ClickButton 事件
+    trackEvent('ClickButton', 'anonymous').catch(e => console.error(e));
 
-            log(`[Redirect] Going to: ${liffUrl}`);
+    // 使用 line:// scheme 開啟 LINE App
+    const lineSchemeUrl = `line://app/${CONFIG.LIFF_ID}?${params.toString()}`;
+    log(`[Redirect] Trying: ${lineSchemeUrl}`);
+    
+    // 嘗試開啟
+    window.location.href = lineSchemeUrl;
 
-            // 發送 ClickButton 事件
-            trackEvent('ClickButton', 'anonymous').catch(e => console.error(e));
-
-            // 跳轉
-            window.location.href = liffUrl;
-        }
+    // 2.5 秒後如果還在頁面，fallback 到 https
+    setTimeout(() => {
+        const httpsUrl = `https://liff.line.me/${CONFIG.LIFF_ID}?${params.toString()}`;
+        log(`[Fallback] Going to: ${httpsUrl}`);
+        window.location.href = httpsUrl;
+    }, 2500);
+}
 
         // 隱藏所有畫面
         function hideAll() {
