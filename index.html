@@ -345,7 +345,7 @@ async function openLineApp() {
             document.getElementById('loginOptions').style.display = 'block';
         }
 
-        // 初始化 LIFF
+// 初始化 LIFF
 async function initApp() {
     log('[LIFF] Initializing...');
     log(`[Session] ${SESSION_ID}`);
@@ -373,17 +373,10 @@ async function initApp() {
             if (isFromExternal) {
                 log('[LIFF] From external browser, sending LinkUser and redirecting...');
                 
-                // 發送 LinkUser 事件更新 anonymous 記錄
+                // 只發送 LinkUser 事件（ViewContent 和 ClickButton 在外部已發送）
                 await trackLinkUser(profile.userId, existingSessionId, existingIP);
                 
-                // 發送 ViewContent 事件
-                const sessionIdToUse = existingSessionId || SESSION_ID;
-                await trackEvent('ViewContent', profile.userId, sessionIdToUse);
-                
-                // 發送 ClickButton 事件（因為跳過了 Contact 按鈕）
-                await trackEvent('ClickButton', profile.userId, sessionIdToUse);
-                
-                // 自動跳轉到加入好友/對話頁面
+                // 直接跳轉到加入好友/對話頁面
                 openLineChat();
                 return;
             }
