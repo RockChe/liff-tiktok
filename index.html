@@ -162,6 +162,11 @@
         // 快取 IP 地址
         let cachedIP = null;
 
+        // 一般日誌
+        function log(message) {
+            console.log(message);
+        }
+
         // 獲取 IP 地址
         async function getIPAddress() {
             if (cachedIP) return cachedIP;
@@ -177,41 +182,6 @@
             }
         }
 
-        // 一般日誌
-        function log(message) {
-            console.log(message);
-        }
-
-        // 偵測是否在 In-App Browser 中
-        function isInAppBrowser() {
-            const ua = navigator.userAgent || navigator.vendor || window.opera;
-            log(`[Check] UA: ${ua}`);
-
-            // 偵測常見的 In-App Browser
-            const inAppPatterns = [
-                'FBAN', 'FBAV',           // Facebook
-                'Instagram',               // Instagram
-                'Line/',                   // LINE 內建瀏覽器（非 LIFF）
-                'Twitter',                 // Twitter/X
-                'BytedanceWebview',        // TikTok
-                'musical_ly',              // TikTok (舊版)
-                'TikTok',                  // TikTok
-                'Snapchat',                // Snapchat
-                'Pinterest',               // Pinterest
-                'LinkedInApp',             // LinkedIn
-                'KAKAOTALK',               // KakaoTalk
-                'WeChat', 'MicroMessenger' // WeChat
-            ];
-
-            for (const pattern of inAppPatterns) {
-                if (ua.indexOf(pattern) > -1) {
-                    log(`[Browser] Detected In-App Browser: ${pattern}`);
-                    return true;
-                }
-            }
-            return false;
-        }
-
         // 取得 URL 參數
         function getUrlParams() {
             const params = new URLSearchParams(window.location.search);
@@ -219,33 +189,29 @@
                 ttclid: params.get('ttclid') || '',
                 campaign: params.get('campaign') || '',
                 adgroup: params.get('adgroup') || '',
-                ad: params.get('ad') || ''
+                ad: params.get('ad') || '',
+                session_id: params.get('session_id') || '',
+                ip: params.get('ip') || ''
             };
         }
 
-        // 取得 LINE App URL (使用 HTTPS 格式)
-        function getLineAppUrl() {
-            const params = window.location.search;
-            return `https://liff.line.me/${CONFIG.LIFF_ID}${params}`;
-        }
-
         // 發送事件到 n8n
-        async function trackEvent(eventName, userId) {
+        async function trackEvent(eventName, userId, customSessionId = null) {
             const params = getUrlParams();
             const ip = await getIPAddress();
 
             const payload = {
                 event: eventName,
                 userId: userId,
-                userIP: ip,
+                ip: ip,
                 ttclid: params.ttclid,
-                sessionId: SESSION_ID,
+                sessionId: customSessionId || SESSION_ID,
                 campaign: params.campaign,
                 adgroup: params.adgroup,
                 ad: params.ad,
                 contentId: CONFIG.CONTENT_ID,
                 contentType: 'product',
-                test_event_code: 'TEST48725', // TikTok Test Events Code
+                test_event_code: 'TEST48725',
                 timestamp: new Date().toISOString(),
                 userAgent: navigator.userAgent,
                 url: window.location.href
@@ -270,6 +236,40 @@
             }
         }
 
+        // 發送 LinkUser 事件（用於更新 anonymous 記錄）
+        async function trackLinkUser(userId, sessionId, ip) {
+            const params = getUrlParams();
+
+            const payload = {
+                event: 'LinkUser',
+                userId: userId,
+                sessionId: sessionId,
+                ip: ip,
+                ttclid: params.ttclid,
+                campaign: params.campaign,
+                contentId: CONFIG.CONTENT_ID,
+                timestamp: new Date().toISOString()
+            };
+
+            log(`[Track] Sending LinkUser - userId: ${userId}, sessionId: ${sessionId}, ip: ${ip}`);
+
+            try {
+                const response = await fetch(CONFIG.N8N_WEBHOOK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    log(`[Track] LinkUser Success`);
+                } else {
+                    log(`[Track] LinkUser Failed: ${response.status}`);
+                }
+            } catch (error) {
+                log(`[Track] LinkUser Error: ${error.message}`);
+            }
+        }
+
         // 開啟 LINE 對話
         function openLineChat() {
             const chatUrl = `https://line.me/R/oaMessage/${CONFIG.LINE_OA_ID}/`;
@@ -282,62 +282,35 @@
             }
         }
 
-        // 複製連結到剪貼簿
-        async function copyToClipboard(text) {
-            log('[Copy] Starting copy...');
-            try {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    log('[Copy] Using navigator.clipboard');
-                    await navigator.clipboard.writeText(text);
-                    return true;
-                }
-                throw new Error('Clipboard API not available');
-            } catch (err) {
-                log(`[Copy] Clipboard API failed: ${err.message}, trying fallback`);
-                // Fallback
-                try {
-                    const textArea = document.createElement('textarea');
-                    textArea.value = text;
-                    textArea.style.position = 'fixed';
-                    textArea.style.left = '-999999px';
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    const successful = document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                    log(`[Copy] Fallback result: ${successful}`);
-                    return successful;
-                } catch (e) {
-                    log(`[Copy] Fallback failed: ${e.message}`);
-                    return false;
-                }
-            }
+        // 開啟 LINE App（帶入 IP 和 session_id）
+        async function openLineApp() {
+            log('[Action] openLineApp called');
+
+            // 取得 IP
+            const ip = await getIPAddress();
+
+            // 保留 URL 參數，加入 IP 和 session_id
+            const urlParams = getUrlParams();
+            const params = new URLSearchParams();
+
+            if (urlParams.ttclid) params.set('ttclid', urlParams.ttclid);
+            if (urlParams.campaign) params.set('campaign', urlParams.campaign);
+            if (urlParams.adgroup) params.set('adgroup', urlParams.adgroup);
+            if (urlParams.ad) params.set('ad', urlParams.ad);
+            params.set('session_id', SESSION_ID);
+            if (ip) params.set('ip', ip);
+
+            // 跳轉到 LIFF URL（會在 LINE App 內開啟）
+            const liffUrl = `https://liff.line.me/${CONFIG.LIFF_ID}?${params.toString()}`;
+
+            log(`[Redirect] Going to: ${liffUrl}`);
+
+            // 發送 ClickButton 事件
+            trackEvent('ClickButton', 'anonymous').catch(e => console.error(e));
+
+            // 跳轉
+            window.location.href = liffUrl;
         }
-
-function openLineApp() {
-    log('[Action] openLineApp called');
-    
-    // 保留 URL 參數（ttclid, campaign 等）
-    const params = window.location.search;
-    
-    // 發送追蹤事件
-    trackEvent('ClickButton', 'anonymous').catch(e => console.error(e));
-    
-    // 使用 line:// scheme 強制開啟 LINE App
-    const lineSchemeUrl = `line://app/${CONFIG.LIFF_ID}${params}`;
-    
-    log(`[Redirect] Going to: ${lineSchemeUrl}`);
-    
-    // 嘗試開啟 LINE App
-    window.location.href = lineSchemeUrl;
-    
-    // 3 秒後如果還在頁面，fallback 到 HTTPS URL
-    setTimeout(() => {
-        const httpsUrl = `https://liff.line.me/${CONFIG.LIFF_ID}${params}`;
-        log(`[Fallback] Going to: ${httpsUrl}`);
-        window.location.href = httpsUrl;
-    }, 2500);
-}
-
 
         // 隱藏所有畫面
         function hideAll() {
@@ -371,6 +344,14 @@ function openLineApp() {
             log('[LIFF] Initializing...');
             log(`[Session] ${SESSION_ID}`);
 
+            // 檢查 URL 是否有帶入參數（從外部瀏覽器跳轉過來）
+            const urlParams = getUrlParams();
+            const existingSessionId = urlParams.session_id;
+            const existingIP = urlParams.ip;
+
+            if (existingSessionId) log(`[From URL] session_id: ${existingSessionId}`);
+            if (existingIP) log(`[From URL] ip: ${existingIP}`);
+
             try {
                 await liff.init({ liffId: CONFIG.LIFF_ID });
                 log('[LIFF] Init OK');
@@ -380,13 +361,22 @@ function openLineApp() {
                 if (liff.isLoggedIn()) {
                     const profile = await liff.getProfile();
                     log(`[User] ${profile.userId}`);
-                    await trackEvent('ViewContent', profile.userId);
+
+                    // 如果有 existingSessionId 或 existingIP，表示是從外部跳轉過來
+                    // 發送 LinkUser 事件讓 n8n 更新之前的 anonymous 記錄
+                    if (existingSessionId || existingIP) {
+                        log('[LIFF] From external browser, sending LinkUser event');
+                        await trackLinkUser(profile.userId, existingSessionId, existingIP);
+                    }
+
+                    // 使用傳入的 session_id 或新的 SESSION_ID
+                    const sessionIdToUse = existingSessionId || SESSION_ID;
+                    await trackEvent('ViewContent', profile.userId, sessionIdToUse);
                     showContent();
                     return;
                 }
 
                 log('[LIFF] Showing login options');
-                // Track ViewContent for anonymous users (external browsers)
                 await trackEvent('ViewContent', 'anonymous');
                 showLoginOptions();
 
@@ -396,14 +386,14 @@ function openLineApp() {
             }
         }
 
-        // 按鈕事件 - 開始對話
+        // 按鈕事件 - 開始對話 (Contact)
         document.getElementById('openChatBtn').addEventListener('click', async function () {
             try {
                 this.disabled = true;
                 this.textContent = '跳轉中...';
 
-                // 嘗試並行處理，不要讓 track 阻塞跳轉
-                liff.getProfile().then(p => trackEvent('SubmitForm', p.userId)).catch(e => log(e));
+                // 發送 ClickButton 事件
+                liff.getProfile().then(p => trackEvent('ClickButton', p.userId)).catch(e => log(e));
 
                 setTimeout(() => openLineChat(), 500);
             } catch (e) {
@@ -413,9 +403,11 @@ function openLineApp() {
         });
 
         // 按鈕事件 - 使用 LINE App 開啟
-        document.getElementById('openLineAppBtn').addEventListener('click', function () {
+        document.getElementById('openLineAppBtn').addEventListener('click', async function () {
             log('[Click] Open LINE App Button');
-            openLineApp();
+            this.disabled = true;
+            this.textContent = '開啟中...';
+            await openLineApp();
         });
 
         // 按鈕事件 - 使用帳號密碼登入
