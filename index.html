@@ -346,51 +346,63 @@ async function openLineApp() {
         }
 
         // 初始化 LIFF
-        async function initApp() {
-            log('[LIFF] Initializing...');
-            log(`[Session] ${SESSION_ID}`);
+async function initApp() {
+    log('[LIFF] Initializing...');
+    log(`[Session] ${SESSION_ID}`);
 
-            // 檢查 URL 是否有帶入參數（從外部瀏覽器跳轉過來）
-            const urlParams = getUrlParams();
-            const existingSessionId = urlParams.session_id;
-            const existingIP = urlParams.ip;
+    // 檢查 URL 是否有帶入參數（從外部瀏覽器跳轉過來）
+    const urlParams = getUrlParams();
+    const existingSessionId = urlParams.session_id;
+    const existingIP = urlParams.ip;
+    const isFromExternal = existingSessionId || existingIP;
 
-            if (existingSessionId) log(`[From URL] session_id: ${existingSessionId}`);
-            if (existingIP) log(`[From URL] ip: ${existingIP}`);
+    if (existingSessionId) log(`[From URL] session_id: ${existingSessionId}`);
+    if (existingIP) log(`[From URL] ip: ${existingIP}`);
 
-            try {
-                await liff.init({ liffId: CONFIG.LIFF_ID });
-                log('[LIFF] Init OK');
-                log(`[LIFF] Client: ${liff.isInClient()}`);
-                log(`[LIFF] LoggedIn: ${liff.isLoggedIn()}`);
+    try {
+        await liff.init({ liffId: CONFIG.LIFF_ID });
+        log('[LIFF] Init OK');
+        log(`[LIFF] Client: ${liff.isInClient()}`);
+        log(`[LIFF] LoggedIn: ${liff.isLoggedIn()}`);
 
-                if (liff.isLoggedIn()) {
-                    const profile = await liff.getProfile();
-                    log(`[User] ${profile.userId}`);
+        if (liff.isLoggedIn()) {
+            const profile = await liff.getProfile();
+            log(`[User] ${profile.userId}`);
 
-                    // 如果有 existingSessionId 或 existingIP，表示是從外部跳轉過來
-                    // 發送 LinkUser 事件讓 n8n 更新之前的 anonymous 記錄
-                    if (existingSessionId || existingIP) {
-                        log('[LIFF] From external browser, sending LinkUser event');
-                        await trackLinkUser(profile.userId, existingSessionId, existingIP);
-                    }
-
-                    // 使用傳入的 session_id 或新的 SESSION_ID
-                    const sessionIdToUse = existingSessionId || SESSION_ID;
-                    await trackEvent('ViewContent', profile.userId, sessionIdToUse);
-                    showContent();
-                    return;
-                }
-
-                log('[LIFF] Showing login options');
-                await trackEvent('ViewContent', 'anonymous');
-                showLoginOptions();
-
-            } catch (error) {
-                log(`[LIFF] Error: ${error.message}`);
-                showError('載入失敗: ' + error.message);
+            // 如果是從外部跳轉過來
+            if (isFromExternal) {
+                log('[LIFF] From external browser, sending LinkUser and redirecting...');
+                
+                // 發送 LinkUser 事件更新 anonymous 記錄
+                await trackLinkUser(profile.userId, existingSessionId, existingIP);
+                
+                // 發送 ViewContent 事件
+                const sessionIdToUse = existingSessionId || SESSION_ID;
+                await trackEvent('ViewContent', profile.userId, sessionIdToUse);
+                
+                // 發送 ClickButton 事件（因為跳過了 Contact 按鈕）
+                await trackEvent('ClickButton', profile.userId, sessionIdToUse);
+                
+                // 自動跳轉到加入好友/對話頁面
+                openLineChat();
+                return;
             }
+
+            // 正常流程（從 LINE 內直接開啟）
+            await trackEvent('ViewContent', profile.userId);
+            showContent();
+            return;
         }
+
+        log('[LIFF] Showing login options');
+        await trackEvent('ViewContent', 'anonymous');
+        showLoginOptions();
+
+    } catch (error) {
+        log(`[LIFF] Error: ${error.message}`);
+        showError('載入失敗: ' + error.message);
+    }
+}
 
         // 按鈕事件 - 開始對話 (Contact)
         document.getElementById('openChatBtn').addEventListener('click', async function () {
