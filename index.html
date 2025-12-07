@@ -159,6 +159,24 @@
         // 產生 Session ID
         const SESSION_ID = Date.now().toString();
 
+        // 快取 IP 地址
+        let cachedIP = null;
+
+        // 獲取 IP 地址
+        async function getIPAddress() {
+            if (cachedIP) return cachedIP;
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                cachedIP = data.ip;
+                log(`[IP] Got: ${cachedIP}`);
+                return cachedIP;
+            } catch (error) {
+                log(`[IP] Error: ${error.message}`);
+                return null;
+            }
+        }
+
         // 一般日誌
         function log(message) {
             console.log(message);
@@ -214,10 +232,12 @@
         // 發送事件到 n8n
         async function trackEvent(eventName, userId) {
             const params = getUrlParams();
+            const ip = await getIPAddress();
 
             const payload = {
                 event: eventName,
                 userId: userId,
+                ip: ip,
                 ttclid: params.ttclid,
                 sessionId: SESSION_ID,
                 campaign: params.campaign,
