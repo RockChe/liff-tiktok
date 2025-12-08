@@ -1,151 +1,275 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>David鐵板燒</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>David 鐵板燒 - 領取 $200 優惠</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        david: {
+                            orange: '#EA580C', 
+                            brown: '#431407',
+                            bg: '#FFF7ED',
+                            gold: '#F59E0B'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'float': '0 10px 15px -3px rgba(234, 88, 12, 0.2)',
+                    },
+                    animation: {
+                        'point-down': 'pointDown 1.5s infinite',
+                    },
+                    keyframes: {
+                        pointDown: {
+                            '0%, 100%': { transform: 'translateY(0)', opacity: '0.6' },
+                            '50%': { transform: 'translateY(5px)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #00B900 0%, #00C300 100%);
-            color: white;
+            background-color: #FFF7ED;
+            color: #431407;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .container {
-            text-align: center;
-            padding: 40px 20px;
-            max-width: 400px;
-        }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 
-        .logo {
-            width: 80px;
-            height: 80px;
-            background: white;
+        /* 優惠券樣式 - 鋸齒邊緣 */
+        .coupon-notch {
+            position: absolute;
+            top: 50%;
+            width: 24px;
+            height: 24px;
+            background-color: #FFF7ED;
             border-radius: 50%;
-            margin: 0 auto 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            transform: translateY(-50%);
+            z-index: 10;
         }
+        .notch-left { left: -12px; }
+        .notch-right { right: -12px; }
 
-        .logo svg {
-            width: 50px;
-            height: 50px;
-            fill: #00B900;
-        }
-
-        h1 {
-            font-size: 24px;
-            margin-bottom: 12px;
-        }
-
-        p {
-            font-size: 16px;
-            opacity: 0.9;
-            margin-bottom: 32px;
-            line-height: 1.5;
-        }
-
-        .btn {
-            background: white;
-            color: #00B900;
-            border: none;
-            padding: 16px 48px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 30px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            transition: transform 0.2s;
-            display: block;
-            width: 100%;
-            max-width: 280px;
-            margin: 12px auto;
-            text-decoration: none;
-        }
-
-        .btn:hover {
-            transform: scale(1.05);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-secondary {
-            background: transparent;
-            border: 2px solid white;
-            color: white;
-            box-shadow: none;
-        }
-
-        #loading {
-            font-size: 18px;
-        }
-
-        #loginOptions {
-            display: none;
-        }
-
-        #content {
-            display: none;
-        }
-
-        .error {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 16px;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
+        .snap-x { scroll-snap-type: x mandatory; }
+        .snap-center { scroll-snap-align: center; }
     </style>
 </head>
+<body class="pb-32">
 
-<body>
-    <div class="container">
-        <div id="loading">載入中...</div>
-
-        <div id="loginOptions">
-            <div class="logo">
-                <svg viewBox="0 0 24 24">
-                    <path
-                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                </svg>
+    <!-- 1. 頂部 Logo -->
+    <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur shadow-sm px-4 py-3 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <div class="w-9 h-9 bg-david-orange rounded-lg flex items-center justify-center text-white text-lg shadow-md">
+                <i class="fas fa-utensils"></i>
             </div>
-            <h1>David鐵板燒</h1>
-            <p>請選擇登入方式</p>
-            <button class="btn" id="openLineAppBtn">使用 LINE App 開啟</button>
-            <button class="btn btn-secondary" id="loginBtn">使用帳號密碼登入</button>
+            <div>
+                <h1 class="text-lg font-black tracking-wide text-david-brown leading-none">
+                    David <span class="text-sm font-bold text-gray-500">鐵板燒</span>
+                </h1>
+                <p class="text-[10px] text-david-orange font-medium tracking-wider">TAIWANESE TEPPANYAKI</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-100">
+            <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+            營業中
+        </div>
+    </nav>
+
+    <!-- 2. 滑動美食 Banner -->
+    <section class="mt-5 px-4">
+        <p class="text-xs font-bold text-gray-400 mb-2 px-1 flex items-center gap-1">
+            <i class="fas fa-fire-alt text-david-orange"></i> 師傅現做推薦
+        </p>
+        
+        <div class="flex overflow-x-auto snap-x hide-scroll gap-3 pb-4">
+            
+            <!-- Slide 1: 師傅煎牛排 -->
+            <div class="min-w-[90%] snap-center relative rounded-2xl overflow-hidden shadow-float h-60 group">
+                <img src="https://drive.google.com/thumbnail?id=1-RmbMGJk2Q7LvQr4GCx0QqdcZteWbSe0&sz=w2816" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                <div class="absolute bottom-4 left-4 text-white">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="bg-david-orange text-[10px] px-2 py-0.5 rounded font-bold">招牌</span>
+                        <span class="text-xs text-orange-200"><i class="fas fa-clock mr-1"></i>現點現煎</span>
+                    </div>
+                    <h2 class="text-2xl font-black mb-0.5">師傅手切牛排</h2>
+                    <p class="text-sm opacity-90 text-gray-300">高溫封鎖肉汁，每一口都鮮嫩</p>
+                </div>
+            </div>
+
+            <!-- Slide 2: 黃金雞腿排 -->
+            <div class="min-w-[90%] snap-center relative rounded-2xl overflow-hidden shadow-float h-60 group">
+                <img src="https://drive.google.com/thumbnail?id=1PmbUR5Yz-mDm4SJeSa1dUAPtX8m1q1xG&sz=w2816" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                <div class="absolute bottom-4 left-4 text-white">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="bg-david-gold text-black text-[10px] px-2 py-0.5 rounded font-bold">人氣</span>
+                        <span class="text-xs text-yellow-200"><i class="fas fa-star mr-1"></i>酥脆多汁</span>
+                    </div>
+                    <h2 class="text-2xl font-black mb-0.5">黃金脆皮雞腿</h2>
+                    <p class="text-sm opacity-90 text-gray-300">嚴選大雞腿，慢火煎至外酥內嫩</p>
+                </div>
+            </div>
+
+            <!-- Slide 3: 明蝦干貝 -->
+            <div class="min-w-[90%] snap-center relative rounded-2xl overflow-hidden shadow-float h-60 group">
+                <img src="https://drive.google.com/thumbnail?id=1O5mNGOz9eex-3EnLeE1rM9T1H03Fk2ZH&sz=w2816" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                <div class="absolute bottom-4 left-4 text-white">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded font-bold">極鮮</span>
+                        <span class="text-xs text-blue-200"><i class="fas fa-water mr-1"></i>海陸升級</span>
+                    </div>
+                    <h2 class="text-2xl font-black mb-0.5">深海明蝦佐干貝</h2>
+                    <p class="text-sm opacity-90 text-gray-300">兩尾大蝦搭配鮮甜干貝，極致享受</p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- 3. 優化後的優惠券：好友限定權益 -->
+    <section class="px-4 mb-8">
+        <div class="relative w-full bg-gradient-to-r from-red-600 to-red-700 rounded-xl shadow-xl flex items-stretch h-28 overflow-hidden">
+            <!-- 裝飾背景 -->
+            <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-yellow-300 via-transparent to-transparent"></div>
+            
+            <!-- 左右缺口 -->
+            <div class="coupon-notch notch-left shadow-inner"></div>
+            <div class="coupon-notch notch-right shadow-inner"></div>
+
+            <!-- 左側：價值區 -->
+            <div class="w-[70%] p-4 flex flex-col justify-center relative border-r-2 border-dashed border-white/20">
+                <div class="flex items-center gap-1 mb-1">
+                    <span class="bg-yellow-400 text-red-800 text-[10px] font-bold px-1.5 py-0.5 rounded-sm">見面禮</span>
+                    <span class="text-[10px] text-white/80">David 鐵板燒</span>
+                </div>
+                <div class="flex items-baseline gap-1">
+                    <span class="text-lg font-bold text-white">$</span>
+                    <span class="text-5xl font-black text-white tracking-tighter drop-shadow-sm">200</span>
+                </div>
+                <p class="text-xs text-white/80">餐點現金抵用券</p>
+            </div>
+
+            <!-- 右側：權益說明區 (已修正為好友限定) -->
+            <div class="w-[30%] bg-black/10 flex flex-col items-center justify-center text-white relative">
+                <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center mb-1">
+                    <!-- 皇冠圖示 -->
+                    <i class="fas fa-crown text-yellow-300 text-sm"></i>
+                </div>
+                <!-- 文案優化 -->
+                <p class="text-xs font-bold opacity-90">好友限定</p>
+                
+                <!-- 向下引導箭頭 -->
+                <div class="absolute bottom-2 animate-point-down">
+                    <i class="fas fa-arrow-down text-[10px] text-white/70"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 輔助文字 -->
+        <p class="text-center text-xs text-gray-500 mt-2 flex items-center justify-center gap-1">
+            <i class="fas fa-gift text-david-orange"></i>
+            點擊下方按鈕加入好友，<span class="text-gray-700 font-bold">系統自動發送</span>此優惠
+        </p>
+    </section>
+
+    <!-- 4. 鎖定功能 (Grid Layout) -->
+    <section class="px-4 mb-6">
+        <div class="flex items-center justify-between mb-3 px-1">
+            <h3 class="font-bold text-david-brown text-base">會員專屬服務</h3>
+            <span class="text-xs text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100 shadow-sm">
+                <i class="fas fa-lock text-[10px] mr-1"></i>加入後解鎖
+            </span>
         </div>
 
-        <div id="content">
-            <div class="logo">
-                <svg viewBox="0 0 24 24">
-                    <path
-                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                </svg>
+        <div class="grid grid-cols-2 gap-3">
+            <!-- 訂位 -->
+            <div class="bg-white p-3 rounded-xl border border-orange-100 shadow-sm flex items-center gap-3 relative overflow-hidden opacity-80">
+                <div class="w-10 h-10 rounded-full bg-orange-50 text-david-orange flex items-center justify-center text-lg shrink-0">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-800 text-sm">線上訂位</h4>
+                    <p class="text-[10px] text-gray-500">免打電話</p>
+                </div>
+                <i class="fas fa-lock text-gray-300 absolute top-2 right-2 text-[10px]"></i>
             </div>
-            <h1>David鐵板燒</h1>
-            <p>感謝您的興趣！<br>點擊下方按鈕與我們對話</p>
-            <button class="btn" id="openChatBtn">Contact</button>
-        </div>
+            
+            <!-- 菜單 -->
+            <div class="bg-white p-3 rounded-xl border border-orange-100 shadow-sm flex items-center gap-3 relative overflow-hidden opacity-80">
+                <div class="w-10 h-10 rounded-full bg-orange-50 text-david-orange flex items-center justify-center text-lg shrink-0">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-800 text-sm">瀏覽菜單</h4>
+                    <p class="text-[10px] text-gray-500">人氣套餐</p>
+                </div>
+                <i class="fas fa-lock text-gray-300 absolute top-2 right-2 text-[10px]"></i>
+            </div>
 
-        <div id="error" class="error" style="display:none;"></div>
+            <!-- 外帶 -->
+            <div class="bg-white p-3 rounded-xl border border-orange-100 shadow-sm flex items-center gap-3 relative overflow-hidden opacity-80">
+                <div class="w-10 h-10 rounded-full bg-orange-50 text-david-orange flex items-center justify-center text-lg shrink-0">
+                    <i class="fas fa-shopping-bag"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-800 text-sm">外帶點餐</h4>
+                    <p class="text-[10px] text-gray-500">預約取餐</p>
+                </div>
+                <i class="fas fa-lock text-gray-300 absolute top-2 right-2 text-[10px]"></i>
+            </div>
+
+            <!-- 客服 -->
+            <div class="bg-white p-3 rounded-xl border border-orange-100 shadow-sm flex items-center gap-3 relative overflow-hidden opacity-80">
+                <div class="w-10 h-10 rounded-full bg-orange-50 text-david-orange flex items-center justify-center text-lg shrink-0">
+                    <i class="fas fa-comment-dots"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-800 text-sm">真人客服</h4>
+                    <p class="text-[10px] text-gray-500">專人服務</p>
+                </div>
+                <i class="fas fa-lock text-gray-300 absolute top-2 right-2 text-[10px]"></i>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. Sticky Footer (唯一的行動呼籲) -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-orange-100 p-4 pb-safe z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <button id="ctaBtn" class="w-full bg-[#06C755] hover:bg-[#05b64d] text-white font-bold py-3.5 rounded-xl text-lg shadow-lg shadow-green-200 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 group relative overflow-hidden">
+
+            <!-- 光澤動畫 -->
+            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
+
+            <i class="fab fa-line text-2xl"></i>
+            <div class="text-left leading-none ml-1">
+                <span class="block text-[10px] opacity-80 font-normal">David 鐵板燒</span>
+                <span id="ctaBtnText" class="block text-base tracking-wide">加入好友．領取 $200</span>
+            </div>
+            <i class="fas fa-chevron-right text-xs opacity-70 ml-2 group-hover:translate-x-1 transition-transform"></i>
+        </button>
     </div>
 
+    <style>
+        @keyframes shimmer {
+            100% { transform: translateX(100%); }
+        }
+    </style>
 
     <script>
         // ====== 設定區 ======
@@ -281,153 +405,120 @@
             }
         }
 
-// 開啟 LINE App（帶入 IP 和 session_id）
-async function openLineApp() {
-    log('[Action] openLineApp called');
+        // 開啟 LINE App（帶入 IP 和 session_id）
+        async function openLineApp() {
+            log('[Action] openLineApp called');
 
-    // 取得 IP
-    const ip = await getIPAddress();
+            // 取得 IP
+            const ip = await getIPAddress();
 
-    // 保留 URL 參數，加入 IP 和 session_id
-    const urlParams = getUrlParams();
-    const params = new URLSearchParams();
+            // 保留 URL 參數，加入 IP 和 session_id
+            const urlParams = getUrlParams();
+            const params = new URLSearchParams();
 
-    if (urlParams.ttclid) params.set('ttclid', urlParams.ttclid);
-    if (urlParams.campaign) params.set('campaign', urlParams.campaign);
-    if (urlParams.adgroup) params.set('adgroup', urlParams.adgroup);
-    if (urlParams.ad) params.set('ad', urlParams.ad);
-    params.set('session_id', SESSION_ID);
-    if (ip) params.set('ip', ip);
+            if (urlParams.ttclid) params.set('ttclid', urlParams.ttclid);
+            if (urlParams.campaign) params.set('campaign', urlParams.campaign);
+            if (urlParams.adgroup) params.set('adgroup', urlParams.adgroup);
+            if (urlParams.ad) params.set('ad', urlParams.ad);
+            params.set('session_id', SESSION_ID);
+            if (ip) params.set('ip', ip);
 
-    // 發送 ClickButton 事件
-    trackEvent('ClickButton', 'anonymous').catch(e => console.error(e));
+            // 發送 ClickButton 事件
+            trackEvent('ClickButton', 'anonymous').catch(e => console.error(e));
 
-    // 使用 line:// scheme 開啟 LINE App
-    const lineSchemeUrl = `line://app/${CONFIG.LIFF_ID}?${params.toString()}`;
-    log(`[Redirect] Trying: ${lineSchemeUrl}`);
-    
-    // 嘗試開啟
-    window.location.href = lineSchemeUrl;
+            // 使用 line:// scheme 開啟 LINE App
+            const lineSchemeUrl = `line://app/${CONFIG.LIFF_ID}?${params.toString()}`;
+            log(`[Redirect] Trying: ${lineSchemeUrl}`);
 
-    // 2.5 秒後如果還在頁面，fallback 到 https
-    setTimeout(() => {
-        const httpsUrl = `https://liff.line.me/${CONFIG.LIFF_ID}?${params.toString()}`;
-        log(`[Fallback] Going to: ${httpsUrl}`);
-        window.location.href = httpsUrl;
-    }, 2500);
-}
+            // 嘗試開啟
+            window.location.href = lineSchemeUrl;
 
-        // 隱藏所有畫面
-        function hideAll() {
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('loginOptions').style.display = 'none';
-            document.getElementById('content').style.display = 'none';
-            document.getElementById('error').style.display = 'none';
+            // 2.5 秒後如果還在頁面，fallback 到 https
+            setTimeout(() => {
+                const httpsUrl = `https://liff.line.me/${CONFIG.LIFF_ID}?${params.toString()}`;
+                log(`[Fallback] Going to: ${httpsUrl}`);
+                window.location.href = httpsUrl;
+            }, 2500);
         }
 
-        // 顯示錯誤
-        function showError(message) {
-            hideAll();
-            document.getElementById('error').style.display = 'block';
-            document.getElementById('error').textContent = message;
-        }
+        // 初始化 LIFF
+        async function initApp() {
+            log('[LIFF] Initializing...');
+            log(`[Session] ${SESSION_ID}`);
 
-        // 顯示內容
-        function showContent() {
-            hideAll();
-            document.getElementById('content').style.display = 'block';
-        }
+            // 檢查 URL 是否有帶入參數（從外部瀏覽器跳轉過來）
+            const urlParams = getUrlParams();
+            const existingSessionId = urlParams.session_id;
+            const existingIP = urlParams.ip;
+            const isFromExternal = existingSessionId || existingIP;
 
-        // 顯示登入選項
-        function showLoginOptions() {
-            hideAll();
-            document.getElementById('loginOptions').style.display = 'block';
-        }
+            if (existingSessionId) log(`[From URL] session_id: ${existingSessionId}`);
+            if (existingIP) log(`[From URL] ip: ${existingIP}`);
 
-// 初始化 LIFF
-async function initApp() {
-    log('[LIFF] Initializing...');
-    log(`[Session] ${SESSION_ID}`);
-
-    // 檢查 URL 是否有帶入參數（從外部瀏覽器跳轉過來）
-    const urlParams = getUrlParams();
-    const existingSessionId = urlParams.session_id;
-    const existingIP = urlParams.ip;
-    const isFromExternal = existingSessionId || existingIP;
-
-    if (existingSessionId) log(`[From URL] session_id: ${existingSessionId}`);
-    if (existingIP) log(`[From URL] ip: ${existingIP}`);
-
-    try {
-        await liff.init({ liffId: CONFIG.LIFF_ID });
-        log('[LIFF] Init OK');
-        log(`[LIFF] Client: ${liff.isInClient()}`);
-        log(`[LIFF] LoggedIn: ${liff.isLoggedIn()}`);
-
-        if (liff.isLoggedIn()) {
-            const profile = await liff.getProfile();
-            log(`[User] ${profile.userId}`);
-
-            // 如果是從外部跳轉過來
-            if (isFromExternal) {
-                log('[LIFF] From external browser, sending LinkUser and redirecting...');
-                
-                // 只發送 LinkUser 事件（ViewContent 和 ClickButton 在外部已發送）
-                await trackLinkUser(profile.userId, existingSessionId, existingIP);
-                
-                // 直接跳轉到加入好友/對話頁面
-                openLineChat();
-                return;
-            }
-
-            // 正常流程（從 LINE 內直接開啟）
-            await trackEvent('ViewContent', profile.userId);
-            showContent();
-            return;
-        }
-
-        log('[LIFF] Showing login options');
-        await trackEvent('ViewContent', 'anonymous');
-        showLoginOptions();
-
-    } catch (error) {
-        log(`[LIFF] Error: ${error.message}`);
-        showError('載入失敗: ' + error.message);
-    }
-}
-
-        // 按鈕事件 - 開始對話 (Contact)
-        document.getElementById('openChatBtn').addEventListener('click', async function () {
             try {
-                this.disabled = true;
-                this.textContent = '跳轉中...';
+                await liff.init({ liffId: CONFIG.LIFF_ID });
+                log('[LIFF] Init OK');
+                log(`[LIFF] Client: ${liff.isInClient()}`);
+                log(`[LIFF] LoggedIn: ${liff.isLoggedIn()}`);
 
-                // 發送 ClickButton 事件
-                liff.getProfile().then(p => trackEvent('ClickButton', p.userId)).catch(e => log(e));
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    log(`[User] ${profile.userId}`);
 
-                setTimeout(() => openLineChat(), 500);
-            } catch (e) {
-                log(`[Error] Chat: ${e}`);
-                openLineChat();
+                    // 如果是從外部跳轉過來
+                    if (isFromExternal) {
+                        log('[LIFF] From external browser, sending LinkUser and redirecting...');
+
+                        // 只發送 LinkUser 事件（ViewContent 和 ClickButton 在外部已發送）
+                        await trackLinkUser(profile.userId, existingSessionId, existingIP);
+
+                        // 直接跳轉到加入好友/對話頁面
+                        openLineChat();
+                        return;
+                    }
+
+                    // 正常流程（從 LINE 內直接開啟）
+                    await trackEvent('ViewContent', profile.userId);
+
+                    // 更新按鈕文字為「開始對話」
+                    document.getElementById('ctaBtnText').textContent = '開始對話．領取優惠';
+                    return;
+                }
+
+                // 未登入狀態
+                log('[LIFF] Not logged in, showing landing page');
+                await trackEvent('ViewContent', 'anonymous');
+
+            } catch (error) {
+                log(`[LIFF] Error: ${error.message}`);
+                // LIFF 初始化失敗時仍可使用基本功能
+                await trackEvent('ViewContent', 'anonymous');
             }
-        });
+        }
 
-        // 按鈕事件 - 使用 LINE App 開啟
-        document.getElementById('openLineAppBtn').addEventListener('click', async function () {
-            log('[Click] Open LINE App Button');
-            this.disabled = true;
-            this.textContent = '開啟中...';
-            await openLineApp();
-        });
+        // 按鈕事件 - CTA 按鈕點擊
+        document.getElementById('ctaBtn').addEventListener('click', async function () {
+            const btn = this;
+            const btnText = document.getElementById('ctaBtnText');
 
-        // 按鈕事件 - 使用帳號密碼登入
-        document.getElementById('loginBtn').addEventListener('click', function () {
-            log('[Click] Login Button');
             try {
-                liff.login();
+                btn.disabled = true;
+                btnText.textContent = '跳轉中...';
+
+                // 檢查是否在 LINE 內且已登入
+                if (typeof liff !== 'undefined' && liff.isLoggedIn()) {
+                    // 發送 ClickButton 事件
+                    liff.getProfile().then(p => trackEvent('ClickButton', p.userId)).catch(e => log(e));
+                    // 開啟 LINE 對話
+                    setTimeout(() => openLineChat(), 500);
+                } else {
+                    // 開啟 LINE App
+                    await openLineApp();
+                }
             } catch (e) {
-                log(`[Error] Login: ${e.message}`);
-                alert('登入啟動失敗: ' + e.message);
+                log(`[Error] CTA Click: ${e}`);
+                // 失敗時直接開啟 LINE
+                openLineChat();
             }
         });
 
@@ -438,5 +529,4 @@ async function initApp() {
         });
     </script>
 </body>
-
 </html>
