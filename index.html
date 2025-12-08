@@ -65,8 +65,14 @@
         .notch-left { left: -12px; }
         .notch-right { right: -12px; }
 
-        .snap-x { scroll-snap-type: x mandatory; }
-        .snap-center { scroll-snap-align: center; }
+        .snap-x {
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+        }
+        .snap-center {
+            scroll-snap-align: center;
+            scroll-snap-stop: always;
+        }
     </style>
 </head>
 <body class="pb-32">
@@ -405,12 +411,12 @@
             }
         }
 
-        // 開啟 LINE App（帶入 IP 和 session_id）
-        async function openLineApp() {
+        // 開啟 LINE App（帶入 IP 和 session_id）- 優化版：不等待
+        function openLineApp() {
             log('[Action] openLineApp called');
 
-            // 取得 IP
-            const ip = await getIPAddress();
+            // 使用已快取的 IP（頁面載入時已預取）
+            const ip = cachedIP;
 
             // 保留 URL 參數，加入 IP 和 session_id
             const urlParams = getUrlParams();
@@ -423,14 +429,14 @@
             params.set('session_id', SESSION_ID);
             if (ip) params.set('ip', ip);
 
-            // 發送 ClickButton 事件
+            // 發送 ClickButton 事件（不等待）
             trackEvent('ClickButton', 'anonymous').catch(e => console.error(e));
 
             // 使用 line:// scheme 開啟 LINE App
             const lineSchemeUrl = `line://app/${CONFIG.LIFF_ID}?${params.toString()}`;
             log(`[Redirect] Trying: ${lineSchemeUrl}`);
 
-            // 嘗試開啟
+            // 立即嘗試開啟
             window.location.href = lineSchemeUrl;
 
             // 2.5 秒後如果還在頁面，fallback 到 https
@@ -496,35 +502,32 @@
             }
         }
 
-        // 按鈕事件 - CTA 按鈕點擊
-        document.getElementById('ctaBtn').addEventListener('click', async function () {
+        // 按鈕事件 - CTA 按鈕點擊（優化版：立即跳轉）
+        document.getElementById('ctaBtn').addEventListener('click', function () {
             const btn = this;
             const btnText = document.getElementById('ctaBtnText');
 
-            try {
-                btn.disabled = true;
-                btnText.textContent = '跳轉中...';
+            btn.disabled = true;
+            btnText.textContent = '跳轉中...';
 
-                // 檢查是否在 LINE 內且已登入
-                if (typeof liff !== 'undefined' && liff.isLoggedIn()) {
-                    // 發送 ClickButton 事件
-                    liff.getProfile().then(p => trackEvent('ClickButton', p.userId)).catch(e => log(e));
-                    // 開啟 LINE 對話
-                    setTimeout(() => openLineChat(), 500);
-                } else {
-                    // 開啟 LINE App
-                    await openLineApp();
-                }
-            } catch (e) {
-                log(`[Error] CTA Click: ${e}`);
-                // 失敗時直接開啟 LINE
+            // 檢查是否在 LINE 內且已登入
+            if (typeof liff !== 'undefined' && liff.isLoggedIn()) {
+                // 發送 ClickButton 事件（不等待）
+                liff.getProfile().then(p => trackEvent('ClickButton', p.userId)).catch(e => log(e));
+                // 立即開啟 LINE 對話
                 openLineChat();
+            } else {
+                // 開啟 LINE App（已優化為同步）
+                openLineApp();
             }
         });
 
         // 頁面載入時初始化
         document.addEventListener('DOMContentLoaded', function () {
             log('[App] DOM loaded');
+            // 預先取得 IP（不阻塞，背景執行）
+            getIPAddress();
+            // 初始化 LIFF
             initApp();
         });
     </script>
