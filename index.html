@@ -156,11 +156,20 @@
             CONTENT_ID: 'david_teppanyaki'
         };
 
-        // 產生 Session ID
-        const SESSION_ID = Date.now().toString();
+        // ====== Session Management ======
+        const STORAGE_KEY = 'liff_session_id';
+        let SESSION_ID = sessionStorage.getItem(STORAGE_KEY);
 
-        // 快取 IP 地址
-        let cachedIP = null;
+        // If no session ID exists (first visit), generate one
+        if (!SESSION_ID) {
+            SESSION_ID = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5);
+            sessionStorage.setItem(STORAGE_KEY, SESSION_ID);
+        }
+
+        log(`[Session] Current ID: ${SESSION_ID}`);
+
+        // ====== Variables ======
+        // Cache IP Address
 
         // 一般日誌
         function log(message) {
@@ -305,7 +314,7 @@
             // 使用 line:// scheme 開啟 LINE App
             const lineSchemeUrl = `line://app/${CONFIG.LIFF_ID}?${params.toString()}`;
             log(`[Redirect] Trying: ${lineSchemeUrl}`);
-            
+
             // 嘗試開啟
             window.location.href = lineSchemeUrl;
 
@@ -351,17 +360,20 @@
 
             // 檢查 URL 是否有帶入參數（從外部瀏覽器跳轉過來）
             const urlParams = getUrlParams();
-            const existingSessionId = urlParams.session_id;
+            const externalSessionId = urlParams.session_id;
             const existingIP = urlParams.ip;
-            const isFromExternal = existingSessionId || existingIP;
 
-            // 如果是從外部跳轉過來，直接顯示「跳轉中...」
-            if (isFromExternal) {
-                document.getElementById('loading').textContent = '跳轉中...';
-                log('[LIFF] From external, showing redirect message');
+            // 如果 URL 帶有 session_id，這代表是跨瀏覽器/跨 App 的延續
+            // 我們應該更新本地的 SESSION_ID 以保持一致
+            if (externalSessionId && externalSessionId !== SESSION_ID) {
+                log(`[Session] Updating from URL: ${externalSessionId}`);
+                SESSION_ID = externalSessionId;
+                sessionStorage.setItem(STORAGE_KEY, SESSION_ID);
             }
 
-            if (existingSessionId) log(`[From URL] session_id: ${existingSessionId}`);
+            const isFromExternal = externalSessionId || existingIP;
+
+            if (externalSessionId) log(`[From URL] session_id: ${externalSessionId}`);
             if (existingIP) log(`[From URL] ip: ${existingIP}`);
 
             try {
@@ -369,7 +381,6 @@
                 log('[LIFF] Init OK');
                 log(`[LIFF] Client: ${liff.isInClient()}`);
                 log(`[LIFF] LoggedIn: ${liff.isLoggedIn()}`);
-
                 if (liff.isLoggedIn()) {
                     const profile = await liff.getProfile();
                     log(`[User] ${profile.userId}`);
@@ -377,10 +388,10 @@
                     // 如果是從外部跳轉過來
                     if (isFromExternal) {
                         log('[LIFF] From external browser, sending LinkUser and redirecting...');
-                        
+
                         // 只發送 LinkUser 事件（ViewContent 和 ClickButton 在外部已發送）
                         await trackLinkUser(profile.userId, existingSessionId, existingIP);
-                        
+
                         // 直接跳轉到加入好友/對話頁面
                         openLineChat();
                         return;
