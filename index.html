@@ -156,6 +156,14 @@
             CONTENT_ID: 'david_teppanyaki'
         };
 
+        // ====== Variables ======
+        let cachedIP = null;
+
+        // 一般日誌 (必須在任何 log() 呼叫之前定義)
+        function log(message) {
+            console.log(message);
+        }
+
         // ====== Session Management ======
         const STORAGE_KEY = 'liff_session_id';
         let SESSION_ID = sessionStorage.getItem(STORAGE_KEY);
@@ -167,15 +175,6 @@
         }
 
         log(`[Session] Current ID: ${SESSION_ID}`);
-
-        // ====== Variables ======
-        // Cache IP Address
-        let cachedIP = null;
-
-        // 一般日誌
-        function log(message) {
-            console.log(message);
-        }
 
         // 獲取 IP 地址
         async function getIPAddress() {
