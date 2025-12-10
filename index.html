@@ -387,10 +387,13 @@
 
                     // 如果是從外部跳轉過來
                     if (isFromExternal) {
-                        log('[LIFF] From external browser, sending LinkUser and redirecting...');
+                        log('[LIFF] From external browser, sending ViewContent + LinkUser...');
 
-                        // 只發送 LinkUser 事件（ViewContent 和 ClickButton 在外部已發送）
-                        await trackLinkUser(profile.userId, existingSessionId, existingIP);
+                        // 每次進入頁面都發送 ViewContent
+                        await trackEvent('ViewContent', profile.userId);
+
+                        // 同時發送 LinkUser 事件來更新資料庫中的 user_id
+                        await trackLinkUser(profile.userId, externalSessionId, existingIP);
 
                         // 直接跳轉到加入好友/對話頁面
                         openLineChat();
