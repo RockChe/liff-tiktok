@@ -385,12 +385,12 @@
                     const profile = await liff.getProfile();
                     log(`[User] ${profile.userId}`);
 
-                    // 如果是從外部跳轉過來
+                    // 如果是從外部跳轉過來（URL 有 session_id 或 ip 參數）
                     if (isFromExternal) {
-                        log('[LIFF] From external browser, sending ViewContent + LinkUser...');
+                        log('[LIFF] From external browser, sending Contact + LinkUser...');
 
-                        // 每次進入頁面都發送 ViewContent
-                        await trackEvent('ViewContent', profile.userId);
+                        // 從外部跳轉過來時發送 Contact 事件（不是 ViewContent，避免重複）
+                        await trackEvent('Contact', profile.userId);
 
                         // 同時發送 LinkUser 事件來更新資料庫中的 user_id
                         await trackLinkUser(profile.userId, externalSessionId, existingIP);
