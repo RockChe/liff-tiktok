@@ -165,13 +165,36 @@
         }
 
         // ====== Session Management ======
+        // ====== Session Management ======
         const STORAGE_KEY = 'liff_session_id';
+        const TTCLID_KEY = 'liff_ttclid';
         let SESSION_ID = sessionStorage.getItem(STORAGE_KEY);
+        let storedTtclid = sessionStorage.getItem(TTCLID_KEY);
 
-        // If no session ID exists (first visit), generate one
-        if (!SESSION_ID) {
+        // Check if session_id is passed in URL (redirect from external)
+        const currentParams = new URLSearchParams(window.location.search);
+        const externalSessionId = currentParams.get('session_id');
+        const currentTtclid = currentParams.get('ttclid');
+
+        if (externalSessionId) {
+            // Continuation of session (External -> Internal)
+            SESSION_ID = externalSessionId;
+            log(`[Session] Continuing session from URL: ${SESSION_ID}`);
+            sessionStorage.setItem(STORAGE_KEY, SESSION_ID);
+        } else if (currentTtclid) {
+            // New Ad Entry -> FORCE NEW Session
+            log(`[Session] New ttclid detected (${currentTtclid}) -> Generating NEW Session ID`);
             SESSION_ID = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5);
             sessionStorage.setItem(STORAGE_KEY, SESSION_ID);
+            sessionStorage.setItem(TTCLID_KEY, currentTtclid);
+        } else {
+            // No ttclid & No external session_id -> Keep existing session (if any)
+            // Do NOT generate a new one automatically
+            if (SESSION_ID) {
+                log(`[Session] Using existing ID: ${SESSION_ID}`);
+            } else {
+                log(`[Session] No session parameters found. ID remains null.`);
+            }
         }
 
         log(`[Session] Current ID: ${SESSION_ID}`);
